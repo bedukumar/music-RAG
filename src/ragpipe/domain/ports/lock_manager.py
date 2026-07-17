@@ -87,3 +87,14 @@ class LockManager(ABC):
             ``True`` if the lock was extended, ``False`` if the caller
             is not the current owner or no lock is held.
         """
+
+    @abstractmethod
+    def force_release(self, resource_id: str) -> bool:
+        """Forcibly release a lock on a resource regardless of owner.
+
+        Args:
+            resource_id: Identifier of the resource.
+
+        Returns:
+            ``True`` if a lock was released, ``False`` if no lock was held.
+        """

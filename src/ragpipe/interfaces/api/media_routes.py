@@ -37,7 +37,9 @@ def get_media_repo(request: Request):
 @router.post("", response_model=MediaResponse)
 async def create_media(
     req: MediaCreateRequest,
-    registrar=Depends(get_registrar)
+    background_tasks: BackgroundTasks,
+    registrar=Depends(get_registrar),
+    orchestrator=Depends(get_orchestrator)
 ):
     """Create a new media item."""
     try:
@@ -189,6 +191,7 @@ async def update_metadata(
 async def process_media(
     media_id: str,
     req: ProcessRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     orchestrator=Depends(get_orchestrator)
 ):
@@ -201,7 +204,15 @@ async def process_media(
         jobs = await orchestrator.process_media(media_id, modalities)
         
         for job in jobs:
-            background_tasks.add_task(orchestrator.execute_job, job)
+            async def run_job(j=job):
+                try:
+                    await orchestrator.execute_job(j)
+                finally:
+                    try:
+                        await request.app.state.container._shared_session.remove()
+                    except Exception:
+                        pass
+            background_tasks.add_task(run_job)
             
         return {"jobs_created": len(jobs), "job_ids": [j.id for j in jobs]}
     except ValueError as e:
@@ -214,6 +225,7 @@ async def process_media(
 async def reprocess_modality(
     media_id: str,
     modality: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     orchestrator=Depends(get_orchestrator)
 ):
@@ -221,7 +233,17 @@ async def reprocess_modality(
     try:
         mod = Modality(modality)
         job = await orchestrator.reprocess_modality(media_id, mod)
-        background_tasks.add_task(orchestrator.execute_job, job)
+        
+        async def run_job(j=job):
+            try:
+                await orchestrator.execute_job(j)
+            finally:
+                try:
+                    await request.app.state.container._shared_session.remove()
+                except Exception:
+                    pass
+                    
+        background_tasks.add_task(run_job)
         return {"job_id": job.id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

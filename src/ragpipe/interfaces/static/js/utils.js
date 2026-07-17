@@ -48,6 +48,17 @@ const Utils = {
         };
     },
 
+    throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func(...args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    },
+
     getStatusBadgeClass(status) {
         switch(status?.toLowerCase()) {
             case 'completed': return 'badge-success';
@@ -116,17 +127,17 @@ const Utils = {
         
         const modalHtml = `
             <div class="modal-overlay active" id="current-modal">
-                <div class="modal">
+                <div class="modal" id="modal">
                     <div class="modal-header">
-                        <h3>${title}</h3>
-                        <button class="btn-icon btn-ghost" onclick="Utils.closeModal()">
+                        <h3 id="modal-title">${title}</h3>
+                        <button class="modal-close btn-icon btn-ghost" onclick="Utils.closeModal()">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body" id="modal-content">
                         ${contentHtml}
                     </div>
-                    ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="modal-footer" id="modal-actions">${footerHtml}</div>` : ''}
                 </div>
             </div>
         `;

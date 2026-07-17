@@ -59,6 +59,7 @@ async def get_job(job_id: str, status_service=Depends(get_status_service)):
 @router.post("/{job_id}/retry", response_model=JobResponse)
 async def retry_job(
     job_id: str, 
+    request: Request,
     background_tasks: BackgroundTasks,
     job_manager=Depends(get_job_manager),
     orchestrator=Depends(get_orchestrator)
@@ -66,7 +67,17 @@ async def retry_job(
     """Retry a failed job."""
     try:
         job = await job_manager.retry_job(job_id)
-        background_tasks.add_task(orchestrator.execute_job, job)
+        
+        async def run_job(j=job):
+            try:
+                await orchestrator.execute_job(j)
+            finally:
+                try:
+                    await request.app.state.container._shared_session.remove()
+                except Exception:
+                    pass
+                    
+        background_tasks.add_task(run_job)
         return job
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -59,13 +59,53 @@ const JobList = {
     offset: 0,
     limit: 15,
     total: 0,
+    currentViewedJobId: null,
 
     async mount() {
         document.getElementById('page-title').textContent = 'Job Management';
         await this.loadData();
+        this.wsHandler = this.handleWsEvent.bind(this);
+        ws.on('event:all', this.wsHandler);
+        this.startPolling();
     },
 
-    unmount() {},
+    unmount() {
+        if (this.wsHandler) {
+            ws.off('event:all', this.wsHandler);
+        }
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+    },
+
+    handleWsEvent(event) {
+        // Mark data as stale
+        this.needsRefresh = true;
+    },
+
+    startPolling() {
+        this.needsRefresh = false;
+        this.refreshInterval = setInterval(() => {
+            if (this.needsRefresh) {
+                this.loadDataSilently();
+                if (this.currentViewedJobId && document.getElementById('current-modal') && document.getElementById('current-modal').classList.contains('active')) {
+                    this.viewDetails(this.currentViewedJobId, true);
+                }
+                this.needsRefresh = false;
+            }
+        }, 2000); // Check every 2 seconds (Production standard)
+    },
+
+    async loadDataSilently() {
+        const tbody = document.getElementById('job-table-body');
+        const statusFilter = document.getElementById('job-status-filter').value;
+        try {
+            const data = await api.getJobs(this.offset, this.limit, statusFilter);
+            this.total = data.total;
+            this.renderRows(data.items);
+            this.updatePagination();
+        } catch (e) {}
+    },
 
     async loadData() {
         const tbody = document.getElementById('job-table-body');
@@ -184,9 +224,39 @@ const JobList = {
         } catch (e) {}
     },
     
-    async viewDetails(id) {
+    async viewDetails(id, isSilentUpdate = false) {
+        this.currentViewedJobId = id;
         try {
             const details = await api.getJob(id);
+            let pipelineHtml = '';
+            
+            try {
+                const status = await api.getPipelineStatus(details.media_id);
+                const pState = status.pipelines?.[details.modality];
+                if (pState && pState.stages && pState.stages.length > 0) {
+                    pipelineHtml = '<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);"><strong style="color:var(--text-secondary); display:block; margin-bottom: 0.5rem;">Pipeline Stages:</strong><ul style="list-style:none; padding:0; margin:0; font-size: 0.85rem;">';
+                    const stageOrder = ['VALIDATION', 'NORMALIZATION', 'PREPROCESSING', 'CHUNKING', 'EMBEDDING', 'POST_PROCESSING', 'VECTOR_STORAGE'];
+                    stageOrder.forEach(stage => {
+                        const sr = pState.stages.find(s => s.stage === stage);
+                        let icon = '<span style="display:inline-block; width:16px;">⏳</span>';
+                        let color = 'var(--text-muted)';
+                        let extra = '';
+                        if (sr) {
+                            if (sr.status === 'completed') { icon = '<span style="display:inline-block; width:16px;">✅</span>'; color = 'var(--status-success)'; }
+                            else if (sr.status === 'running') { icon = '<span class="spinner" style="display:inline-block; width:14px; height:14px; border-width:2px; vertical-align:middle; border-top-color:var(--primary-color);"></span>'; color = 'var(--primary-color)'; extra = ' <em>(processing...)</em>'; }
+                            else if (sr.status === 'failed') { icon = '<span style="display:inline-block; width:16px;">❌</span>'; color = 'var(--status-danger)'; }
+                            
+                            if (sr.error_message) {
+                                extra += `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: var(--status-danger); padding-left: 20px;">${Utils.escapeHtml(sr.error_message)}</div>`;
+                            }
+                        }
+                        pipelineHtml += `<li style="margin-bottom: 0.5rem; color: ${color};">${icon} <span style="font-weight:500;">${stage.replace('_', ' ')}</span>${extra}</li>`;
+                    });
+                    pipelineHtml += '</ul></div>';
+                }
+            } catch(e) {
+                console.log("Could not fetch pipeline status", e);
+            }
             
             let html = `
                 <div style="font-family: monospace; font-size: 0.85rem;">
@@ -210,7 +280,30 @@ const JobList = {
                 `;
             }
             
-            Utils.showModal('Job Details', html, `<button class="btn btn-primary" onclick="Utils.closeModal()">Close</button>`);
-        } catch(e) {}
+            html += pipelineHtml;
+            
+            if (isSilentUpdate && document.getElementById('modal-content')) {
+                // If it's a silent update and modal is already showing this job, just update the content inside without flickering the backdrop
+                document.getElementById('modal-title').textContent = 'Job Details';
+                document.getElementById('modal-content').innerHTML = html;
+            } else {
+                Utils.showModal('Job Details', html, `<button class="btn btn-primary" onclick="Utils.closeModal()">Close</button>`);
+                
+                // Set up event listener to clear currentViewedJobId on modal close
+                const modal = document.getElementById('modal');
+                const overlay = modal.querySelector('.modal-overlay');
+                const closeBtn = modal.querySelector('.modal-close');
+                
+                const clearJobId = () => { this.currentViewedJobId = null; };
+                if (overlay) overlay.addEventListener('click', clearJobId, {once: true});
+                if (closeBtn) closeBtn.addEventListener('click', clearJobId, {once: true});
+                
+                // Add listener to the 'Close' button inside modal actions too
+                const closeActionBtn = document.querySelector('#modal-actions button.btn-primary');
+                if (closeActionBtn) closeActionBtn.addEventListener('click', clearJobId, {once: true});
+            }
+        } catch(e) {
+            console.error(e);
+        }
     }
 };

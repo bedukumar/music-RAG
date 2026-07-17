@@ -62,6 +62,21 @@ def create_app() -> FastAPI:
     # Include main API router
     app.include_router(main_router)
     
+    from starlette.requests import Request
+    from starlette.responses import Response
+    
+    @app.middleware("http")
+    async def cleanup_session(request: Request, call_next):
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            if hasattr(request.app.state, "container"):
+                try:
+                    await request.app.state.container._shared_session.remove()
+                except Exception:
+                    pass
+    
     # Serve static files for the frontend
     static_dir = os.path.join(os.path.dirname(__file__), "interfaces", "static")
     if os.path.exists(static_dir):

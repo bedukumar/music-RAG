@@ -4,7 +4,7 @@ Pipeline Orchestrator Service.
 Coordinates the execution of jobs and pipelines.
 """
 
-import logging
+import structlog
 import uuid
 from datetime import datetime, timezone
 from typing import Callable
@@ -21,7 +21,7 @@ from ragpipe.domain.ports.metrics_collector import MetricsCollector
 from ragpipe.domain.ports.state_store import StateStore
 from ragpipe.domain.exceptions import LockError
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class PipelineOrchestrator:
@@ -105,14 +105,17 @@ class PipelineOrchestrator:
         Args:
             job: The job to execute.
         """
+        # Bind context
+        log = logger.bind(job_id=job.id, media_id=job.media_id, modality=job.modality.value)
+        
         lock_id = f"pipeline:{job.media_id}:{job.modality.value}"
         owner_id = f"worker-{job.id}"
         
-        if not await self.lock_manager.acquire(lock_id, owner_id, ttl_seconds=3600):
-            logger.warning("Could not acquire lock for %s", lock_id)
-            raise LockError(lock_id)
-            
         try:
+            if not await self.lock_manager.acquire(lock_id, owner_id, ttl_seconds=3600):
+                log.warning("Could not acquire lock", lock_id=lock_id)
+                raise LockError(lock_id)
+                
             job.status = ProcessingStatus.PROCESSING
             job.started_at = datetime.now(timezone.utc)
             job.pipeline_state_id = f"state-{job.id}"
@@ -148,7 +151,7 @@ class PipelineOrchestrator:
             self.metrics.increment("jobs_completed_total", tags={"modality": job.modality.value})
             
         except Exception as e:
-            logger.exception("Job %s failed: %s", job.id, str(e))
+            log.exception("Job failed", error=str(e))
             job.status = ProcessingStatus.FAILED
             job.completed_at = datetime.now(timezone.utc)
             job.error_message = str(e)
@@ -179,6 +182,10 @@ class PipelineOrchestrator:
         Returns:
             The created job.
         """
+        # Force release any lingering locks to allow immediate execution
+        lock_id = f"pipeline:{media_id}:{modality.value}"
+        await self.lock_manager.force_release(lock_id)
+        
         # Reset modality status
         status = await self.media_repo.get_modality_status(media_id, modality)
         if status:

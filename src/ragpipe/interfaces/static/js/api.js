@@ -99,6 +99,10 @@ class ApiClient {
         return this.request(url);
     }
     
+    getJob(jobId) {
+        return this.request(`/jobs/${jobId}`);
+    }
+    
     retryJob(jobId) {
         return this.request(`/jobs/${jobId}/retry`, { method: 'POST' });
     }

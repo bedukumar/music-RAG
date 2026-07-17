@@ -703,3 +703,212 @@ select.form-control {
     background: var(--gradient-primary);
     transition: width 0.3s ease;
 }
+
+/* Spinner Animation for Realtime Pipeline Status */
+.spinner {
+    display: inline-block;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color, #3b82f6);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== Pipeline Status Enhancements ===== */
+
+/* Overall Status Label (pill next to modality header) */
+.pipeline-overall-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: all 0.3s ease;
+}
+
+.pipeline-status-pending {
+    background: rgba(100, 116, 139, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.pipeline-status-running {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    animation: statusGlow-running 2s ease-in-out infinite;
+}
+
+.pipeline-status-completed {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.pipeline-status-failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+@keyframes statusGlow-running {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    50% { box-shadow: 0 0 8px 2px rgba(245, 158, 11, 0.25); }
+}
+
+/* Pipeline Progress Bar */
+.pipeline-progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.pipeline-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+}
+
+.progress-bar-pending {
+    background: linear-gradient(90deg, #475569, #64748b);
+    width: 0% !important;
+}
+
+.progress-bar-running {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+    background-size: 200% 100%;
+    animation: progressShimmer 2s linear infinite;
+}
+
+.progress-bar-completed {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.progress-bar-failed {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+@keyframes progressShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Enhanced Timeline Step States */
+.timeline-step.pending .step-circle {
+    border-color: var(--border-color);
+    background: var(--bg-panel-solid);
+    color: var(--text-muted);
+}
+
+.timeline-step.pending .step-label {
+    color: var(--text-muted);
+}
+
+.timeline-step.completed .step-label {
+    color: var(--status-success);
+}
+
+.timeline-step.running .step-label {
+    color: var(--status-warning);
+}
+
+.timeline-step.failed .step-label {
+    color: var(--status-danger);
+}
+
+.timeline-step.skipped .step-circle {
+    border-color: #475569;
+    border-style: dashed;
+    background: transparent;
+    color: #475569;
+}
+
+.timeline-step.skipped .step-label {
+    color: #475569;
+    font-style: italic;
+}
+
+/* Glow effects for active/completed states */
+.timeline-step.completed .step-circle {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.timeline-step.running .step-circle {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.timeline-step.failed .step-circle {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Completed segment connector line */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 2rem;
+    right: 2rem;
+    height: 2px;
+    background: var(--border-color);
+    z-index: 1;
+}
+
+/* Duration label under completed stages */
+.step-duration {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Pipeline Error Banner */
+.pipeline-error-banner {
+    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid var(--status-danger);
+    border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+    animation: errorSlideIn 0.3s ease-out;
+}
+
+.pipeline-error-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--status-danger);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.pipeline-error-message {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: #fca5a5;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+@keyframes errorSlideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Skipped badge variant */
+.badge-skipped {
+    background: transparent;
+    color: #475569;
+    border: 1px dashed #475569;
+}
+

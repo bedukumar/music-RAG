@@ -7,7 +7,7 @@ Abstract base class for all modality pipelines.
 from __future__ import annotations
 
 import hashlib
-import logging
+import structlog
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any
@@ -25,7 +25,7 @@ from ragpipe.domain.ports.metrics_collector import MetricsCollector
 from ragpipe.domain.ports.state_store import StateStore
 from ragpipe.domain.ports.vector_repository import VectorRepository
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class BasePipeline(ABC):
@@ -118,6 +118,8 @@ class BasePipeline(ABC):
         # Execute stages
         context: dict[str, Any] = {"media_id": media_id}
         
+        log = logger.bind(media_id=media_id, modality=self.modality.value, job_id=job.id)
+        
         def update_memory_stage(sr: StageResult):
             for i, s in enumerate(state.stages):
                 if s.stage == sr.stage:
@@ -157,7 +159,7 @@ class BasePipeline(ABC):
                 ))
 
             except Exception as e:
-                logger.exception("Pipeline stage failed: %s - %s", stage.value, str(e))
+                log.exception("Pipeline stage failed", stage=stage.value, error=str(e))
                 now = datetime.now(timezone.utc)
                 stage_result = replace(stage_result, status=StageStatus.FAILED, completed_at=now, error_message=str(e))
                 update_memory_stage(stage_result)

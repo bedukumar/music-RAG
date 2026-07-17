@@ -95,14 +95,15 @@ class Container:
             self.engine, class_=AsyncSession, expire_on_commit=False
         )
         
-        # In a real FastAPI app, we'd use Dependency Injection per request for the session.
-        # For simplicity in this demo architecture, we'll instantiate them with a shared session or 
-        # recreate them per request. Let's create a shared session for background tasks/orchestrator.
-        # Note: A shared session in async context is generally bad practice due to concurrent operations.
-        # The correct way is `async with self.session_factory() as session: ...` inside the repo methods.
-        # We will modify the repositories to take the session_factory instead, or just assume they manage it.
-        # To avoid rewriting repos now, we'll pass a single session, but warn that this is not prod-ready for high concurrency.
-        self._shared_session = self.session_factory()
+        # Use async_scoped_session so that each background task / API request
+        # gets its own independent AsyncSession to prevent InvalidRequestError.
+        from asyncio import current_task
+        from sqlalchemy.ext.asyncio import async_scoped_session
+        
+        self._shared_session = async_scoped_session(
+            self.session_factory, 
+            scopefunc=current_task
+        )
         
         self.media_repository = SQLAlchemyMediaRepository(self._shared_session)
         self.state_store = SQLAlchemyStateStore(self._shared_session)

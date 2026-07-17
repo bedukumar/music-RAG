@@ -287,9 +287,18 @@ const MediaTable = {
         };
         
         try {
-            await api.createMedia(data);
+            const media = await api.createMedia(data);
+            
+            // Auto-trigger processing
+            try {
+                await api.processMedia(media.id);
+            } catch (processError) {
+                console.error("Auto-process failed:", processError);
+                // Non-fatal, just continue
+            }
+            
             Utils.closeModal();
-            Utils.showToast('Success', 'Media created successfully', 'success');
+            Utils.showToast('Success', 'Media uploaded and processing started', 'success');
             this.loadData();
         } catch (e) {
             // Handled

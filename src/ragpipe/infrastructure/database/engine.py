@@ -96,6 +96,14 @@ class DatabaseEngine:
 
         self._engine = create_async_engine(db_url, **engine_kwargs)
 
+        if is_sqlite:
+            from sqlalchemy import event
+            @event.listens_for(self._engine.sync_engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
         self._session_factory = async_sessionmaker(
             bind=self._engine,
             class_=AsyncSession,

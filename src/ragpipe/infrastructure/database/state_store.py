@@ -116,7 +116,7 @@ class SQLAlchemyStateStore(StateStore):
         stmt = stmt.order_by(PipelineStateORM.created_at.desc())
 
         result = await self._session.execute(stmt)
-        orm = result.scalar_one_or_none()
+        orm = result.scalars().first()
         if orm is None:
             return None
 

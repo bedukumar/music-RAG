@@ -78,6 +78,23 @@ class DatabaseLockManager(LockManager):
         await self._session.flush()
         return result.rowcount > 0
 
+    async def force_release(self, resource_id: str) -> bool:
+        """Forcibly release a lock on a resource regardless of owner.
+
+        Args:
+            resource_id: Identifier of the resource.
+
+        Returns:
+            True if a lock was released, False if no lock was held.
+        """
+        result = await self._session.execute(
+            delete(LockORM).where(
+                LockORM.resource_id == resource_id,
+            )
+        )
+        await self._session.flush()
+        return result.rowcount > 0
+
     async def is_locked(self, resource_id: str) -> bool:
         """Check if a resource is currently locked.
 
