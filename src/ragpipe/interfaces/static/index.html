@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RagPipe - Audio RAG Ingestion Platform</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🌊</span>
+                    <span class="logo-text gradient-text">RagPipe</span>
+                </div>
+                <div class="ws-status" id="ws-status" title="WebSocket Status">
+                    <div class="status-dot disconnected"></div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-view="dashboard">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Dashboard
+                </a>
+                <a href="#media" class="nav-item" data-view="media">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    Media
+                </a>
+                <a href="#jobs" class="nav-item" data-view="jobs">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Jobs
+                </a>
+                <a href="#migrations" class="nav-item" data-view="migrations">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    Migrations
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="system-health">
+                    <div class="health-indicator healthy">System Healthy</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar glass-panel">
+                <h1 id="page-title" class="page-title">Dashboard</h1>
+                <div class="topbar-actions">
+                    <button id="btn-refresh" class="btn btn-icon btn-ghost" title="Refresh">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- View Container (Injected by JS) -->
+            <div id="view-container" class="view-container">
+                <!-- Loading State -->
+                <div class="loader-container">
+                    <div class="spinner"></div>
+                    <p>Loading application...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals (Injected by JS) -->
+    <div id="modal-container"></div>
+
+    <!-- Scripts -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <!-- Components -->
+    <script src="/static/js/components/dashboard.js"></script>
+    <script src="/static/js/components/media_table.js"></script>
+    <script src="/static/js/components/pipeline_view.js"></script>
+    <script src="/static/js/components/job_list.js"></script>
+    <script src="/static/js/components/migration_panel.js"></script>
+    <!-- Main App -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

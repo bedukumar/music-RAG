@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ragpipe"
+version = "0.1.0"
+description = "Production-grade Audio RAG Data Ingestion Platform for Songs, Podcasts, and Videos"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "RagPipe Team" },
+]
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.0",
+    "aiosqlite>=0.19.0",
+    # Vector database
+    "qdrant-client>=1.7.0",
+    # Embedding models
+    "sentence-transformers>=2.3.0",
+    "numpy>=1.24.0",
+    # Audio processing
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    # Configuration
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "python-dotenv>=1.0.0",
+    # Observability
+    "structlog>=24.0.0",
+    "prometheus-client>=0.19.0",
+    # Utilities
+    "python-multipart>=0.0.6",
+    "aiofiles>=23.2.0",
+    "httpx>=0.26.0",
+]
+
+[project.optional-dependencies]
+clap = [
+    "laion-clap>=1.1.4",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.26.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+]
+all = [
+    "ragpipe[clap,dev]",
+]
+
+[project.scripts]
+ragpipe = "ragpipe.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ragpipe"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: Integration tests (require external services)",
+    "slow: Slow tests (embedding model loading, etc.)",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
