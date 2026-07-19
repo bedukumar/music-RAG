@@ -97,3 +97,33 @@ class JobManager:
         
         dead_letter = [j for j in jobs if j.retry_count >= j.max_retries]
         return dead_letter[:limit]
+
+    async def flush_queue(self, queue_type: str, modality: str = None) -> int:
+        """Flush jobs from a queue (pending or dlq).
+
+        Args:
+            queue_type: 'pending' or 'dlq'.
+            modality: Optional modality.
+
+        Returns:
+            Number of jobs cancelled/flushed.
+        """
+        if queue_type == "pending":
+            jobs, _ = await self.state_store.list_jobs(status="pending", limit=10000)
+            if modality:
+                jobs = [j for j in jobs if j.modality.value == modality]
+        elif queue_type == "dlq":
+            jobs = await self.get_dead_letter_jobs(limit=10000)
+            if modality:
+                jobs = [j for j in jobs if j.modality.value == modality]
+        else:
+            raise ValueError(f"Unknown queue type: {queue_type}")
+
+        count = 0
+        for job in jobs:
+            try:
+                await self.cancel_job(job.id)
+                count += 1
+            except Exception:
+                pass
+        return count

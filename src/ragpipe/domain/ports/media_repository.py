@@ -35,6 +35,14 @@ class MediaRepository(ABC):
         """
 
     @abstractmethod
+    def save_batch(self, media_items: list[MediaItem]) -> None:
+        """Persist multiple new media items in a transaction.
+
+        Args:
+            media_items: List of media items to save.
+        """
+
+    @abstractmethod
     def get(self, media_id: str) -> Optional[MediaItem]:
         """Retrieve a media item by its identifier.
 
@@ -87,6 +95,17 @@ class MediaRepository(ABC):
 
         Raises:
             MediaNotFoundError: If the media item does not exist.
+        """
+
+    @abstractmethod
+    def delete_batch(self, media_ids: list[str]) -> int:
+        """Delete multiple media items in a single operation.
+
+        Args:
+            media_ids: List of media IDs to delete.
+
+        Returns:
+            Number of deleted records.
         """
 
     @abstractmethod

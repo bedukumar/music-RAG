@@ -55,6 +55,16 @@ class QdrantVectorRepository(VectorRepository):
         except Exception as e:
             raise VectorStoreError("create_collection", str(e))
 
+    async def list_collections(self) -> list[str]:
+        """List all collections."""
+        def sync_list():
+            return [c.name for c in self._client.get_collections().collections]
+        loop = asyncio.get_event_loop()
+        try:
+            return await loop.run_in_executor(None, sync_list)
+        except Exception as e:
+            raise VectorStoreError("list_collections", str(e))
+
     async def collection_exists(self, name: str) -> bool:
         """Check if a collection exists."""
         def sync_exists():
@@ -252,6 +262,19 @@ class QdrantVectorRepository(VectorRepository):
             await loop.run_in_executor(None, sync_delete)
         except Exception as e:
             raise VectorStoreError("delete_alias", str(e))
+
+    async def optimize_collection(self, name: str) -> None:
+        """Trigger index optimization."""
+        def sync_optimize():
+            self._client.update_collection(
+                collection_name=name,
+                optimizer_config=models.OptimizersConfigDiff(deleted_threshold=0.2)
+            )
+        loop = asyncio.get_event_loop()
+        try:
+            await loop.run_in_executor(None, sync_optimize)
+        except Exception as e:
+            raise VectorStoreError("optimize_collection", str(e))
 
     async def get_collection_info(self, name: str) -> dict:
         """Get collection information."""

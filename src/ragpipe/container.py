@@ -16,6 +16,12 @@ from ragpipe.application.pipelines.metadata_pipeline import MetadataPipeline
 from ragpipe.application.pipelines.transcript_pipeline import TranscriptPipeline
 from ragpipe.application.services.embedding_manager import EmbeddingManager
 from ragpipe.application.services.job_manager import JobManager
+from ragpipe.application.services.chunk_manager import ChunkManager
+from ragpipe.application.services.worker_manager import WorkerManager
+from ragpipe.application.services.search_service import SearchService
+from ragpipe.application.services.enrichment_service import EnrichmentService
+from ragpipe.application.services.duplicate_detector import DuplicateDetector
+from ragpipe.application.services.system_manager import SystemManager
 from ragpipe.application.services.media_registrar import MediaRegistrar
 from ragpipe.application.services.metadata_synchronizer import MetadataSynchronizer
 from ragpipe.application.services.migration_manager import MigrationManager
@@ -73,6 +79,12 @@ class Container:
         self.metadata_synchronizer: Optional[MetadataSynchronizer] = None
         self.status_service: Optional[StatusService] = None
         self.job_manager: Optional[JobManager] = None
+        self.chunk_manager: Optional[ChunkManager] = None
+        self.worker_manager: Optional[WorkerManager] = None
+        self.search_service: Optional[SearchService] = None
+        self.enrichment_service: Optional[EnrichmentService] = None
+        self.duplicate_detector: Optional[DuplicateDetector] = None
+        self.system_manager: Optional[SystemManager] = None
         
         # Embedders (Lazy init or mock for now)
         self.audio_embedder = MockAudioEmbedder()
@@ -149,6 +161,26 @@ class Container:
         self.job_manager = JobManager(
             self.state_store, self.event_bus, self.metrics
         )
+        
+        self.chunk_manager = ChunkManager(
+            self.state_store, self.media_repository, self._pipeline_factory
+        )
+        self.worker_manager = WorkerManager()
+        self.search_service = SearchService(
+            self.vector_repository, self.media_repository
+        )
+        self.enrichment_service = EnrichmentService(self.media_repository)
+        self.duplicate_detector = DuplicateDetector(self.media_repository, self.vector_repository)
+        self.system_manager = SystemManager(self.metrics, self.event_bus)
+        
+        # Hook up the broadcast callback if using AsyncEventBus
+        if hasattr(self.event_bus, 'set_broadcast_callback'):
+            original_cb = self.event_bus._broadcast_callback if hasattr(self.event_bus, '_broadcast_callback') else None
+            def combined_cb(event):
+                self.system_manager.log_event(event)
+                if original_cb:
+                    original_cb(event)
+            self.event_bus.set_broadcast_callback(combined_cb)
 
     def _pipeline_factory(self, modality: Modality) -> BasePipeline:
         """Factory to create the right pipeline based on modality."""

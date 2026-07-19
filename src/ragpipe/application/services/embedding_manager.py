@@ -109,3 +109,34 @@ class EmbeddingManager:
     async def get_version(self, version_id: str) -> Optional[EmbeddingVersion]:
         """Get a specific embedding version by ID."""
         return await self.state_store.get_embedding_version(version_id)
+
+    async def get_media_embeddings(self, media_id: str, modality: Optional[Modality] = None, include_vectors: bool = False) -> list[dict]:
+        """Get embedding info for a media item."""
+        modalities = [modality] if modality else [m for m in Modality]
+        results = []
+        for m in modalities:
+            records = await self.state_store.get_embedding_records(media_id, m)
+            for r in records:
+                version = await self.get_version(r.version_id)
+                data = {
+                    "modality": m.value,
+                    "vector_id": r.vector_id,
+                    "chunk_index": r.chunk_index,
+                    "version_id": r.version_id,
+                    "model": version.model_name if version else "unknown",
+                    "dimension": version.dimension if version else 0,
+                    "created_at": r.created_at.isoformat(),
+                    "metadata": r.chunk_metadata
+                }
+                if include_vectors:
+                    data["vector"] = [] # In real app, fetch from vector_repo
+                results.append(data)
+        return results
+
+    async def list_installed_models(self) -> list[dict]:
+        """Return installed embedding models."""
+        return [
+            {"model": "CLAP", "modality": "audio", "dimension": 512},
+            {"model": "SentenceTransformers", "modality": "transcript", "dimension": 384},
+            {"model": "MockText", "modality": "metadata", "dimension": 384}
+        ]

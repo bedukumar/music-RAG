@@ -19,6 +19,7 @@ lib64/
 parts/
 sdist/
 var/
+frontend/
 wheels/
 graphify-out/
 .agents/
@@ -90,6 +91,39 @@ ragpipe.db
 *.ogg
 *.m4a
 
+frontend/
+
 # Data / Uploads
-data/
+frontend/data/
 !data/.keep
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+h.txt
+node.tar.xz
+api-doc.json
+AGENTS.md
+.codex

@@ -166,6 +166,13 @@ class SQLAlchemyMediaRepository(MediaRepository):
         await self._session.commit()
         logger.info("Saved media item", extra={"media_id": media.id, "type": media.media_type.value})
 
+    async def save_batch(self, media_items: list[MediaItem]) -> None:
+        """Persist multiple new media items in a transaction."""
+        orms = [self._domain_to_orm(media) for media in media_items]
+        self._session.add_all(orms)
+        await self._session.commit()
+        logger.info("Saved %d media items in batch", len(media_items))
+
     async def get(self, media_id: str) -> Optional[MediaItem]:
         """Get a media item by ID.
 
@@ -285,6 +292,15 @@ class SQLAlchemyMediaRepository(MediaRepository):
         await self._session.execute(stmt)
         await self._session.commit()
         logger.info("Deleted media item", extra={"media_id": media_id})
+
+    async def delete_batch(self, media_ids: list[str]) -> int:
+        """Delete multiple media items in a single operation."""
+        stmt = delete(MediaItemORM).where(MediaItemORM.id.in_(media_ids))
+        result = await self._session.execute(stmt)
+        await self._session.commit()
+        deleted_count = result.rowcount
+        logger.info("Deleted %d media items in batch", deleted_count)
+        return deleted_count
 
     async def exists(self, media_id: str) -> bool:
         """Check if a media item exists.

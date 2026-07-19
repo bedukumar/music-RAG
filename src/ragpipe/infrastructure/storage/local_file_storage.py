@@ -104,6 +104,13 @@ class LocalFileStorage(FileStorage):
         """
         return f"file://{self._get_full_path(path)}"
 
+    async def get_file_size(self, path: str) -> int:
+        """Get size of a file in bytes."""
+        full_path = self._get_full_path(path)
+        if not full_path.exists():
+            return 0
+        return full_path.stat().st_size
+
     async def list_files(self, prefix: str) -> list[str]:
         """List files with a given prefix.
 

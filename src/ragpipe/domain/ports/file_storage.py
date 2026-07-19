@@ -77,6 +77,17 @@ class FileStorage(ABC):
         """
 
     @abstractmethod
+    def get_file_size(self, path: str) -> int:
+        """Get size of a file in bytes.
+
+        Args:
+            path: Storage path.
+
+        Returns:
+            Size in bytes.
+        """
+
+    @abstractmethod
     def list_files(self, prefix: str) -> list[str]:
         """List files matching a path prefix.
 

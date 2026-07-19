@@ -39,6 +39,10 @@ class VectorRepository(ABC):
         """
 
     @abstractmethod
+    def list_collections(self) -> list[str]:
+        """List all vector collections."""
+
+    @abstractmethod
     def collection_exists(self, name: str) -> bool:
         """Check whether a collection exists.
 
@@ -56,6 +60,10 @@ class VectorRepository(ABC):
         Args:
             name: Collection name.
         """
+
+    @abstractmethod
+    def optimize_collection(self, name: str) -> None:
+        """Trigger index optimization on the collection."""
 
     @abstractmethod
     def get_collection_info(self, name: str) -> dict[str, object]:

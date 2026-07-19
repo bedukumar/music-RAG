@@ -16,6 +16,10 @@ from ragpipe.interfaces.schemas.media_schemas import (
     MediaListResponse,
     MediaResponse,
     MediaUpdateRequest,
+    BatchCreateRequest,
+    BatchProcessRequest,
+    BatchDeleteRequest,
+    BatchOperationResponse
 )
 from ragpipe.interfaces.schemas.pipeline_schemas import ProcessRequest
 
@@ -80,6 +84,60 @@ async def create_media(
     return saved_media
 
 
+@router.post("/batch", response_model=BatchOperationResponse)
+async def create_media_batch(
+    req: BatchCreateRequest,
+    registrar=Depends(get_registrar)
+):
+    """Create multiple media items in batch."""
+    media_items = []
+    failed = {}
+    
+    for item_req in req.items:
+        try:
+            media_type = MediaType(item_req.media_type.lower())
+            if media_type == MediaType.SONG:
+                media = Song.create(
+                    title=item_req.title, artist=item_req.artist, album=item_req.album,
+                    genre=item_req.genre, tags=item_req.tags or [], duration=item_req.duration,
+                    language=item_req.language, source_url=item_req.source_url,
+                    audio_path=item_req.audio_path, transcript_text=item_req.transcript_text,
+                    metadata_fields=item_req.metadata_fields or {},
+                    lyrics=item_req.lyrics, bpm=item_req.bpm, key=item_req.musical_key
+                )
+            elif media_type == MediaType.PODCAST:
+                media = Podcast.create(
+                    title=item_req.title, artist=item_req.artist, album=item_req.album,
+                    genre=item_req.genre, tags=item_req.tags or [], duration=item_req.duration,
+                    language=item_req.language, source_url=item_req.source_url,
+                    audio_path=item_req.audio_path, transcript_text=item_req.transcript_text,
+                    metadata_fields=item_req.metadata_fields or {},
+                    show_name=item_req.show_name, episode_number=item_req.episode_number,
+                    host=item_req.host, guests=item_req.guests or []
+                )
+            else:
+                media = Video.create(
+                    title=item_req.title, artist=item_req.artist, album=item_req.album,
+                    genre=item_req.genre, tags=item_req.tags or [], duration=item_req.duration,
+                    language=item_req.language, source_url=item_req.source_url,
+                    audio_path=item_req.audio_path, transcript_text=item_req.transcript_text,
+                    metadata_fields=item_req.metadata_fields or {},
+                    resolution=item_req.resolution, fps=item_req.fps, video_path=item_req.video_path
+                )
+            media_items.append(media)
+        except Exception as e:
+            failed[item_req.title] = f"Validation error: {str(e)}"
+            
+    successful, registrar_failed = await registrar.register_batch(media_items)
+    failed.update(registrar_failed)
+    
+    return BatchOperationResponse(
+        successful=successful,
+        failed=failed,
+        skipped=[]
+    )
+
+
 @router.get("", response_model=MediaListResponse)
 async def list_media(
     offset: int = Query(0, ge=0),
@@ -142,6 +200,19 @@ async def delete_media(media_id: str, registrar=Depends(get_registrar)):
         return {"status": "deleted"}
     except MediaNotFoundError:
         raise HTTPException(status_code=404, detail="Media not found")
+
+
+@router.delete("/batch", response_model=BatchOperationResponse)
+async def delete_media_batch(
+    req: BatchDeleteRequest,
+    registrar=Depends(get_registrar)
+):
+    """Delete multiple media items."""
+    if req.dry_run:
+        return BatchOperationResponse(successful=req.media_ids, failed={}, skipped=[])
+        
+    successful, failed = await registrar.delete_batch(req.media_ids)
+    return BatchOperationResponse(successful=successful, failed=failed, skipped=[])
 
 
 @router.post("/{media_id}/audio")
@@ -219,6 +290,44 @@ async def process_media(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/batch/process", response_model=BatchOperationResponse)
+async def process_media_batch(
+    req: BatchProcessRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    orchestrator=Depends(get_orchestrator)
+):
+    """Trigger processing for multiple media items."""
+    successful = []
+    failed = {}
+    
+    modalities = None
+    if req.modalities:
+        try:
+            modalities = [Modality(m) for m in req.modalities]
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+            
+    for media_id in req.media_ids:
+        try:
+            jobs = await orchestrator.process_media(media_id, modalities)
+            for job in jobs:
+                async def run_job(j=job):
+                    try:
+                        await orchestrator.execute_job(j)
+                    finally:
+                        try:
+                            await request.app.state.container._shared_session.remove()
+                        except Exception:
+                            pass
+                background_tasks.add_task(run_job)
+            successful.append(media_id)
+        except Exception as e:
+            failed[media_id] = str(e)
+            
+    return BatchOperationResponse(successful=successful, failed=failed, skipped=[])
 
 
 @router.post("/{media_id}/reprocess/{modality}")

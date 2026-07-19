@@ -77,6 +77,38 @@ class MediaRegistrar:
 
         return media
 
+    async def register_batch(self, media_items: list[MediaItem]) -> tuple[list[str], dict[str, str]]:
+        """Register multiple media items in batch."""
+        successful = []
+        failed = {}
+        try:
+            await self.media_repo.save_batch(media_items)
+            statuses = []
+            for media in media_items:
+                has_audio = bool(media.audio_path)
+                has_transcript = False
+                if hasattr(media, "transcript_text") and media.transcript_text:
+                    has_transcript = True
+                elif hasattr(media, "lyrics") and media.lyrics:
+                    has_transcript = True
+                has_metadata = bool(media.metadata_fields)
+                statuses.extend([
+                    ModalityStatus(media.id, Modality.AUDIO, has_audio, "pending" if has_audio else "skipped", None, None, None),
+                    ModalityStatus(media.id, Modality.TRANSCRIPT, has_transcript, "pending" if has_transcript else "skipped", None, None, None),
+                    ModalityStatus(media.id, Modality.METADATA, has_metadata, "pending" if has_metadata else "skipped", None, None, None),
+                ])
+                successful.append(media.id)
+                self.metrics.increment("media_registered_total", tags={"type": media.media_type.value})
+            for status in statuses:
+                await self.media_repo.save_modality_status(status)
+            for media in media_items:
+                await self.event_bus.publish(MediaCreated(media_id=media.id, media_type=media.media_type.value))
+        except Exception as e:
+            for media in media_items:
+                failed[media.id] = str(e)
+            successful = []
+        return successful, failed
+
     async def update_audio(self, media_id: str, audio_path: str, duration: float | None = None) -> None:
         """Update the audio path for a media item.
 
@@ -160,6 +192,19 @@ class MediaRegistrar:
             media_id=media_id,
             changed_fields=list(metadata.keys()),
         ))
+
+    async def delete_batch(self, media_ids: list[str]) -> tuple[list[str], dict[str, str]]:
+        """Delete multiple media items."""
+        successful = []
+        failed = {}
+        try:
+            deleted_count = await self.media_repo.delete_batch(media_ids)
+            successful = media_ids
+            self.metrics.increment("media_deleted_total", deleted_count)
+        except Exception as e:
+            for m_id in media_ids:
+                failed[m_id] = str(e)
+        return successful, failed
 
     async def delete_media(self, media_id: str) -> None:
         """Delete a media item completely.

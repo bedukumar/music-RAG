@@ -9,12 +9,14 @@ RagPipe processes audio files, extracts embeddings using advanced audio models (
 - **Audio Processing & Embedding**: Leverages libraries like `librosa` and `soundfile` to process audio, and models like `sentence-transformers` and `laion-clap` to generate robust vector embeddings.
 - **Relational & Vector Storage**: Utilizes `SQLAlchemy` (SQLite) for storing metadata (e.g., `ragpipe.db`) and `Qdrant` for scalable vector similarity search.
 - **Async API**: Built with `FastAPI` and `uvicorn` for high-performance, asynchronous endpoints for data ingestion and querying.
+- **Web UI**: A modern React-based frontend application built with Vite and TypeScript for interacting with the RagPipe platform.
 - **Local Visualization**: Designed to support tools that visualize vector embeddings and their associated metadata directly from local storage.
 - **Observability**: Integrated with `structlog` and `prometheus-client` for monitoring and logging.
 
 ## Prerequisites
 
 - Python 3.11+
+- Node.js (for the frontend Web UI)
 - Docker (for running Qdrant locally)
 - System audio dependencies (e.g., `ffmpeg` if required by underlying audio libraries)
 
@@ -39,6 +41,13 @@ RagPipe processes audio files, extracts embeddings using advanced audio models (
    ```
    *(Note: The `.env` file is ignored by git to protect sensitive information).*
 
+4. **Frontend Setup:**
+   Navigate to the frontend directory and install dependencies:
+   ```bash
+   cd frontend
+   npm install
+   ```
+
 ## Getting Started
 
 1. **Start Qdrant (Vector Database):**
@@ -46,7 +55,7 @@ RagPipe processes audio files, extracts embeddings using advanced audio models (
    docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
    ```
 
-2. **Run the Application:**
+2. **Run the Backend API:**
    You can start the main API server using the command-line script:
    ```bash
    ragpipe
@@ -55,6 +64,14 @@ RagPipe processes audio files, extracts embeddings using advanced audio models (
    ```bash
    python src/ragpipe/main.py
    ```
+
+3. **Run the Frontend Web UI:**
+   In a new terminal window, start the React frontend:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   The UI will typically be available at `http://localhost:5173`.
 
 ## Development and Testing
 

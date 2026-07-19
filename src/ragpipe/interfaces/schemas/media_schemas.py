@@ -99,3 +99,27 @@ class MediaListResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class BatchCreateRequest(BaseModel):
+    """Schema for creating multiple media items."""
+    items: list[MediaCreateRequest]
+
+
+class BatchProcessRequest(BaseModel):
+    """Schema for processing multiple media items."""
+    media_ids: list[str]
+    modalities: Optional[list[str]] = None
+
+
+class BatchDeleteRequest(BaseModel):
+    """Schema for deleting multiple media items."""
+    media_ids: list[str]
+    dry_run: bool = False
+
+
+class BatchOperationResponse(BaseModel):
+    """Schema for batch operation results."""
+    successful: list[str]
+    failed: dict[str, str]
+    skipped: list[str] = Field(default_factory=list)
