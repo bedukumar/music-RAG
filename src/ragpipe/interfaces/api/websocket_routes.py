@@ -89,6 +89,11 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.send_json({"type": "initial_stats", "data": stats})
     except Exception as e:
         logger.error("Failed to send initial stats: %s", e)
+    finally:
+        try:
+            await websocket.app.state.container._shared_session.remove()
+        except Exception:
+            pass
         
     try:
         while True:

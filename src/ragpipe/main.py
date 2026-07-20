@@ -6,11 +6,22 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
 
 from ragpipe.container import Container
 from ragpipe.interfaces.api.router import main_router
+
+async def db_session_cleanup(request: Request):
+    try:
+        yield
+    finally:
+        if hasattr(request.app.state, "container"):
+            try:
+                await request.app.state.container._shared_session.remove()
+            except Exception:
+                pass
+
 
 # Configure logging
 logging.basicConfig(
@@ -57,25 +68,13 @@ def create_app() -> FastAPI:
         description="Audio RAG Data Ingestion Platform",
         version="0.1.0",
         lifespan=lifespan,
+        dependencies=[Depends(db_session_cleanup)],
     )
     
     # Include main API router
     app.include_router(main_router)
     
-    from starlette.requests import Request
-    from starlette.responses import Response
-    
-    @app.middleware("http")
-    async def cleanup_session(request: Request, call_next):
-        try:
-            response = await call_next(request)
-            return response
-        finally:
-            if hasattr(request.app.state, "container"):
-                try:
-                    await request.app.state.container._shared_session.remove()
-                except Exception:
-                    pass
+    # Removed HTTP middleware since session cleanup is now handled by the global dependency
     
     # Serve static files for the frontend
     static_dir = os.path.join(os.path.dirname(__file__), "interfaces", "static")
