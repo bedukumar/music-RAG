@@ -63,6 +63,21 @@ class PipelineOrchestrator:
         """
         if modalities is None:
             modalities = await self.get_processable_modalities(media_id)
+        else:
+            # Validate that the requested modalities actually have data available
+            statuses = await self.media_repo.list_modality_statuses(media_id)
+            available = {s.modality for s in statuses if s.data_available}
+            
+            # Filter out requested modalities that lack data
+            original_count = len(modalities)
+            modalities = [m for m in modalities if m in available]
+            
+            if len(modalities) < original_count:
+                log = logger.bind(media_id=media_id)
+                log.info("Filtered out requested modalities due to missing data")
+                
+            if not modalities:
+                return []
             
         jobs = []
         now = datetime.now(timezone.utc)
@@ -182,6 +197,11 @@ class PipelineOrchestrator:
         Returns:
             The created job.
         """
+        # Validate data availability
+        status = await self.media_repo.get_modality_status(media_id, modality)
+        if not status or not status.data_available:
+            raise ValueError(f"Cannot reprocess {modality.value}: data not available")
+
         # Force release any lingering locks to allow immediate execution
         lock_id = f"pipeline:{media_id}:{modality.value}"
         await self.lock_manager.force_release(lock_id)

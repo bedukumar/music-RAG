@@ -203,3 +203,21 @@ class VectorRepository(ABC):
         Args:
             alias: The alias name to remove.
         """
+
+    @abstractmethod
+    def scroll(
+        self, 
+        collection: str, 
+        limit: int = 100, 
+        offset: Optional[Any] = None
+    ) -> tuple[list[dict[str, Any]], Any]:
+        """Scroll over vectors in a collection to retrieve them in batches.
+
+        Args:
+            collection: The collection name.
+            limit: Maximum number of vectors to return.
+            offset: Pagination offset object to resume from.
+
+        Returns:
+            A tuple of (results, next_page_offset).
+        """

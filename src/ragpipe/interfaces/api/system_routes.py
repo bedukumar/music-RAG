@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 from ragpipe.application.services.system_manager import SystemManager
+from ragpipe.application.services.recovery_manager import RecoveryManager
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -22,3 +23,13 @@ async def get_system_events(
     """Webhook log of recent important events."""
     events = system_manager.get_events(limit)
     return {"events": events, "count": len(events)}
+
+def get_recovery_manager(request: Request) -> RecoveryManager:
+    return request.app.state.container.recovery_manager
+
+@router.post("/recover")
+async def run_recovery(
+    recovery_manager: RecoveryManager = Depends(get_recovery_manager)
+):
+    """Scan Qdrant and recover missing records into SQLite."""
+    return await recovery_manager.run_recovery()

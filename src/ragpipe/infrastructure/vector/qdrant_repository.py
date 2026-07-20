@@ -283,7 +283,7 @@ class QdrantVectorRepository(VectorRepository):
             return {
                 "status": str(info.status),
                 "points_count": info.points_count,
-                "vectors_count": info.vectors_count,
+                "vectors_count": getattr(info, "vectors_count", info.points_count),
             }
 
         loop = asyncio.get_event_loop()
@@ -302,3 +302,32 @@ class QdrantVectorRepository(VectorRepository):
             return await loop.run_in_executor(None, sync_count)
         except Exception as e:
             raise VectorStoreError("count", str(e))
+
+    async def scroll(
+        self, 
+        collection: str, 
+        limit: int = 100, 
+        offset: Optional[Any] = None
+    ) -> tuple[list[dict[str, Any]], Any]:
+        """Scroll over vectors in a collection to retrieve them in batches."""
+        def sync_scroll():
+            return self._client.scroll(
+                collection_name=collection,
+                limit=limit,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False
+            )
+
+        loop = asyncio.get_event_loop()
+        try:
+            results, next_page_offset = await loop.run_in_executor(None, sync_scroll)
+            return [
+                {
+                    "id": res.id,
+                    "payload": res.payload
+                }
+                for res in results
+            ], next_page_offset
+        except Exception as e:
+            raise VectorStoreError("scroll", str(e))

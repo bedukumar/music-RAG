@@ -4,6 +4,7 @@ Media Registrar Service.
 Handles ingestion and updates of media items.
 """
 
+from dataclasses import replace
 from typing import Any
 
 from ragpipe.domain.events.events import (
@@ -121,17 +122,16 @@ class MediaRegistrar:
         if not media:
             raise MediaNotFoundError(media_id)
 
-        media.audio_path = audio_path
+        updated_media = replace(media, audio_path=audio_path)
         if duration is not None:
-            media.duration = duration
+            updated_media = replace(updated_media, duration=duration)
 
-        await self.media_repo.update(media)
+        await self.media_repo.update(updated_media)
 
         status = await self.media_repo.get_modality_status(media_id, Modality.AUDIO)
         if status:
-            status.data_available = True
-            status.embedding_status = "pending"
-            await self.media_repo.save_modality_status(status)
+            updated_status = replace(status, data_available=True, embedding_status="pending")
+            await self.media_repo.save_modality_status(updated_status)
 
         await self.event_bus.publish(AudioUploaded(
             media_id=media_id,
@@ -150,18 +150,17 @@ class MediaRegistrar:
         if not media:
             raise MediaNotFoundError(media_id)
 
-        if hasattr(media, "transcript_text"):
-            media.transcript_text = transcript
-        elif hasattr(media, "lyrics"):
-            media.lyrics = transcript
+        if hasattr(media, "lyrics"):
+            updated_media = replace(media, transcript_text=transcript, lyrics=transcript)
+        else:
+            updated_media = replace(media, transcript_text=transcript)
 
-        await self.media_repo.update(media)
+        await self.media_repo.update(updated_media)
 
         status = await self.media_repo.get_modality_status(media_id, Modality.TRANSCRIPT)
         if status:
-            status.data_available = True
-            status.embedding_status = "pending"
-            await self.media_repo.save_modality_status(status)
+            updated_status = replace(status, data_available=True, embedding_status="pending")
+            await self.media_repo.save_modality_status(updated_status)
 
         await self.event_bus.publish(TranscriptUploaded(
             media_id=media_id,
@@ -179,14 +178,16 @@ class MediaRegistrar:
         if not media:
             raise MediaNotFoundError(media_id)
 
-        media.metadata_fields.update(metadata)
-        await self.media_repo.update(media)
+        new_metadata = dict(media.metadata_fields)
+        new_metadata.update(metadata)
+        updated_media = replace(media, metadata_fields=new_metadata)
+        
+        await self.media_repo.update(updated_media)
 
         status = await self.media_repo.get_modality_status(media_id, Modality.METADATA)
         if status:
-            status.data_available = True
-            status.embedding_status = "pending"
-            await self.media_repo.save_modality_status(status)
+            updated_status = replace(status, data_available=True, embedding_status="pending")
+            await self.media_repo.save_modality_status(updated_status)
 
         await self.event_bus.publish(MetadataUpdated(
             media_id=media_id,

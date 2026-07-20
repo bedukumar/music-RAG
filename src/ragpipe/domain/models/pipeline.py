@@ -40,7 +40,7 @@ class StageStatus(Enum):
     SKIPPED = "skipped"
 
 
-@dataclass(frozen=True)
+@dataclass
 class StageResult:
     """Result of executing a single pipeline stage.
 

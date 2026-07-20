@@ -24,6 +24,7 @@ from ragpipe.application.services.duplicate_detector import DuplicateDetector
 from ragpipe.application.services.system_manager import SystemManager
 from ragpipe.application.services.media_registrar import MediaRegistrar
 from ragpipe.application.services.metadata_synchronizer import MetadataSynchronizer
+from ragpipe.application.services.recovery_manager import RecoveryManager
 from ragpipe.application.services.migration_manager import MigrationManager
 from ragpipe.application.services.pipeline_orchestrator import PipelineOrchestrator
 from ragpipe.application.services.status_service import StatusService
@@ -85,6 +86,7 @@ class Container:
         self.enrichment_service: Optional[EnrichmentService] = None
         self.duplicate_detector: Optional[DuplicateDetector] = None
         self.system_manager: Optional[SystemManager] = None
+        self.recovery_manager: Optional[RecoveryManager] = None
         
         # Embedders (Lazy init or mock for now)
         self.audio_embedder = MockAudioEmbedder()
@@ -172,6 +174,10 @@ class Container:
         self.enrichment_service = EnrichmentService(self.media_repository)
         self.duplicate_detector = DuplicateDetector(self.media_repository, self.vector_repository)
         self.system_manager = SystemManager(self.metrics, self.event_bus)
+        
+        self.recovery_manager = RecoveryManager(
+            self.vector_repository, self.media_repository, self.event_bus
+        )
         
         # Hook up the broadcast callback if using AsyncEventBus
         if hasattr(self.event_bus, 'set_broadcast_callback'):
