@@ -103,9 +103,9 @@ class Container:
         # Retrieval Pipeline
         self.retrieval_search_service: Optional[RetrievalSearchService] = None
         
-        # Embedders (Lazy init or mock for now)
-        self.audio_embedder = MockAudioEmbedder()
-        self.text_embedder = MockTextEmbedder(modality=Modality.TRANSCRIPT)
+        # Embedders
+        self.audio_embedder = CLAPEmbedder(enable_fusion=False)
+        self.text_embedder = SentenceTransformerEmbedder()
         
         # Chunkers
         self.audio_chunker = FixedDurationChunker()
@@ -205,12 +205,17 @@ class Container:
 
         embedders = {
             Modality.AUDIO: CLAPQueryEmbedder(self.audio_embedder),
-            Modality.TRANSCRIPT: SentenceTransformerQueryEmbedder(self.text_embedder)
+            Modality.TRANSCRIPT: SentenceTransformerQueryEmbedder(self.text_embedder),
+            Modality.METADATA: SentenceTransformerQueryEmbedder(self.text_embedder)
         }
         
+        # Import the new QdrantAudioRetriever
+        from ragpipe.infrastructure.retrieval.qdrant.audio_retriever import QdrantAudioRetriever
+        
         vector_retrievers = {
-            Modality.AUDIO: QdrantVectorRetriever(self.vector_repository, Modality.AUDIO, audio_collection),
-            Modality.TRANSCRIPT: QdrantVectorRetriever(self.vector_repository, Modality.TRANSCRIPT, transcript_collection)
+            Modality.AUDIO: QdrantAudioRetriever(self.vector_repository, audio_collection),
+            Modality.TRANSCRIPT: QdrantVectorRetriever(self.vector_repository, Modality.TRANSCRIPT, transcript_collection),
+            Modality.METADATA: QdrantVectorRetriever(self.vector_repository, Modality.METADATA, metadata_collection)
         }
         
         metadata_retriever = QdrantMetadataRetriever(qdrant_client, metadata_collection)

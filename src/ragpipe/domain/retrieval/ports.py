@@ -33,7 +33,7 @@ class VectorRetriever(ABC):
 
     @abstractmethod
     async def search(
-        self, query_vector: list[float], top_k: int, filters: dict | None = None
+        self, query_vector: list[float], top_k: int, filters: dict | None = None, query_text: str | None = None
     ) -> list[RetrievalResult]:
         """Search the vector database."""
         pass
@@ -42,6 +42,31 @@ class VectorRetriever(ABC):
     @abstractmethod
     def modality(self) -> Modality:
         """The modality this retriever handles."""
+        pass
+
+
+class AudioRetriever(VectorRetriever):
+    """Abstract interface specifically for Audio retrieval operations."""
+    
+    @abstractmethod
+    async def search(
+        self, 
+        query_vector: list[float], 
+        top_k: int, 
+        score_threshold: float = 0.0,
+        include_similarity_score: bool = True,
+        filters: dict | None = None,
+        query_text: str | None = None
+    ) -> list[RetrievalResult]:
+        """Search the audio vector database.
+        
+        Args:
+            query_vector: L2-normalized query vector.
+            top_k: Max number of results.
+            score_threshold: Minimum normalized similarity score [0,1].
+            include_similarity_score: Whether to keep the score in output.
+            filters: Optional metadata filters.
+        """
         pass
 
 

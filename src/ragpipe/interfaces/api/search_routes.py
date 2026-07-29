@@ -79,6 +79,8 @@ class SearchRequest(BaseModel):
     filters: Dict[str, Any] = Field(default_factory=dict) # exact matches
     tag_matches: List[str] = Field(default_factory=list)
     top_k: int = Field(default=10, ge=1, le=100)
+    score_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
+    include_similarity_score: bool = True
     rerank: bool = False
     fusion_strategy: str = "rrf"
 
@@ -104,6 +106,8 @@ async def search(
             tag_matches=request.tag_matches
         ),
         top_k=request.top_k,
+        score_threshold=request.score_threshold,
+        include_similarity_score=request.include_similarity_score,
         rerank=request.rerank,
         fusion_strategy=request.fusion_strategy
     )

@@ -121,7 +121,11 @@ class CLAPEmbedder(AudioEmbeddingProvider):
             # Reshape to (1, T) for batch dimension
             audio_batch = audio.reshape(1, -1)
             
-            return self._model.get_audio_embedding_from_data(x=audio_batch, use_tensor=False)
+            vec = self._model.get_audio_embedding_from_data(x=audio_batch, use_tensor=False)
+            
+            # Strictly L2 normalize the embedding
+            vec = vec / np.linalg.norm(vec, axis=1, keepdims=True)
+            return vec
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, embed_sync)
@@ -138,7 +142,9 @@ class CLAPEmbedder(AudioEmbeddingProvider):
         await self._ensure_loaded()
 
         def embed_sync():
-            return self._model.get_audio_embedding_from_filelist(x=[file_path], use_tensor=False)
+            vec = self._model.get_audio_embedding_from_filelist(x=[file_path], use_tensor=False)
+            vec = vec / np.linalg.norm(vec, axis=1, keepdims=True)
+            return vec
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, embed_sync)
@@ -178,7 +184,9 @@ class CLAPEmbedder(AudioEmbeddingProvider):
 
         def embed_sync():
             # get_text_embedding expects a list of strings
-            return self._model.get_text_embedding([text], use_tensor=False)
+            vec = self._model.get_text_embedding([text], use_tensor=False)
+            vec = vec / np.linalg.norm(vec, axis=1, keepdims=True)
+            return vec
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, embed_sync)

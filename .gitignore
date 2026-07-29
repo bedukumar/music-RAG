@@ -19,6 +19,7 @@ lib64/
 parts/
 sdist/
 var/
+node/
 frontend/
 wheels/
 graphify-out/
@@ -129,3 +130,5 @@ AGENTS.md
 .codex
 
 test_all_apis.py
+
+node/

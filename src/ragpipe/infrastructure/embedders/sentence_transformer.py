@@ -57,6 +57,12 @@ class SentenceTransformerEmbedder(TextEmbeddingProvider):
     def modality(self) -> Modality:
         return self._modality
 
+    async def embed(self, data: object) -> np.ndarray:
+        raise NotImplementedError("Use embed_text for SentenceTransformerEmbedder")
+
+    async def embed_batch(self, data_list: list) -> np.ndarray:
+        raise NotImplementedError("Use embed_texts for SentenceTransformerEmbedder")
+
     async def _ensure_loaded(self) -> None:
         """Load the model lazily on first use."""
         if self._model is not None:

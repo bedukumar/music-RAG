@@ -114,8 +114,17 @@ class QdrantVectorRepository(VectorRepository):
 
     async def search(self, collection: str, query_vector: list[float], limit: int = 10, filters: Optional[dict] = None) -> list[dict]:
         """Search for similar vectors."""
-        # Note: In a full implementation, we'd map the generic filters dict to Qdrant's Filter objects
         qdrant_filter = None
+        if filters:
+            must_conditions = []
+            for key, val in filters.items():
+                must_conditions.append(
+                    models.FieldCondition(
+                        key=key, match=models.MatchValue(value=val)
+                    )
+                )
+            if must_conditions:
+                qdrant_filter = models.Filter(must=must_conditions)
         
         def sync_search():
             return self._client.query_points(

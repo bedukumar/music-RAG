@@ -55,7 +55,7 @@ class RetrievalPlanner(BaseRetrievalPipeline):
         modality_results: Dict[Modality, List[RetrievalResult]] = {}
 
         for modality in query.active_modalities:
-            if modality == Modality.METADATA:
+            if modality == Modality.METADATA and not query.text:
                 results = await self.metadata_retriever.search(query, query.top_k)
                 modality_results[modality] = results
             else:
@@ -63,9 +63,32 @@ class RetrievalPlanner(BaseRetrievalPipeline):
                 retriever = self.vector_retrievers.get(modality)
                 if embedder and retriever:
                     embedding = await embedder.embed_query(query.text)
-                    results = await retriever.search(
-                        embedding.vector, query.top_k, query.filters.exact_matches
-                    )
+                    
+                    # If this is the specialized AudioRetriever, pass the extended configuration
+                    if hasattr(retriever, "score_threshold") or modality == Modality.AUDIO:
+                        # For dynamic dispatch safety, we'll try passing kwargs directly
+                        # or specifically if it's the audio retriever port
+                        from ragpipe.domain.retrieval.ports import AudioRetriever
+                        if isinstance(retriever, AudioRetriever):
+                            results = await retriever.search(
+                                query_vector=embedding.vector,
+                                top_k=query.top_k,
+                                score_threshold=query.score_threshold,
+                                include_similarity_score=query.include_similarity_score,
+                                filters=query.filters.exact_matches,
+                                query_text=query.text
+                            )
+                        else:
+                            results = await retriever.search(
+                                query_vector=embedding.vector, 
+                                top_k=query.top_k, 
+                                filters=query.filters.exact_matches,
+                                query_text=query.text
+                            )
+                    else:
+                        results = await retriever.search(
+                            embedding.vector, query.top_k, query.filters.exact_matches, query.text
+                        )
                     modality_results[modality] = results
 
         await self._emit_stage_completed(

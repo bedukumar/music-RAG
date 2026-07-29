@@ -39,6 +39,8 @@ class SearchQuery:
     active_modalities: list[Modality] = field(default_factory=list)
     filters: SearchFilters = field(default_factory=SearchFilters)
     top_k: int = 10
+    score_threshold: float = 0.0
+    include_similarity_score: bool = True
     rerank: bool = False
     fusion_strategy: str = "rrf"
 
