@@ -109,3 +109,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
+    except Exception as e:
+        logger.error("WebSocket error: %s", e)
+        await manager.disconnect(websocket)

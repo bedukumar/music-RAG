@@ -127,3 +127,5 @@ node.tar.xz
 api-doc.json
 AGENTS.md
 .codex
+
+test_all_apis.py

@@ -46,6 +46,18 @@ from ragpipe.infrastructure.metrics.prometheus_metrics import PrometheusMetricsC
 from ragpipe.infrastructure.storage.local_file_storage import LocalFileStorage
 from ragpipe.infrastructure.vector.qdrant_repository import QdrantVectorRepository
 
+# Retrieval Pipeline Imports
+from ragpipe.application.retrieval.planner import RetrievalPlanner
+from ragpipe.application.retrieval.orchestrator import RetrievalOrchestrator
+from ragpipe.application.retrieval.services.search_service import SearchService as RetrievalSearchService
+from ragpipe.infrastructure.retrieval.embedders.clap_embedder import CLAPQueryEmbedder
+from ragpipe.infrastructure.retrieval.embedders.sentence_transformer_embedder import SentenceTransformerQueryEmbedder
+from ragpipe.infrastructure.retrieval.qdrant.vector_retriever import QdrantVectorRetriever
+from ragpipe.infrastructure.retrieval.qdrant.metadata_retriever import QdrantMetadataRetriever
+from ragpipe.infrastructure.retrieval.fusion.strategies import ReciprocalRankFusion, WeightedFusionStrategy
+from ragpipe.infrastructure.retrieval.rerankers.cross_encoder import MockCrossEncoderReranker
+from ragpipe.infrastructure.retrieval.db.payload_loader import PayloadLoaderImpl
+
 logger = logging.getLogger(__name__)
 
 
@@ -87,6 +99,9 @@ class Container:
         self.duplicate_detector: Optional[DuplicateDetector] = None
         self.system_manager: Optional[SystemManager] = None
         self.recovery_manager: Optional[RecoveryManager] = None
+        
+        # Retrieval Pipeline
+        self.retrieval_search_service: Optional[RetrievalSearchService] = None
         
         # Embedders (Lazy init or mock for now)
         self.audio_embedder = MockAudioEmbedder()
@@ -178,6 +193,52 @@ class Container:
         self.recovery_manager = RecoveryManager(
             self.vector_repository, self.media_repository, self.event_bus
         )
+        
+        # Initialize Retrieval Pipeline Components
+        qdrant_client = self.vector_repository._client
+        
+        # Hardcode some dummy collection names for the retrievers, they should ideally map to active versions
+        import uuid
+        audio_collection = f"{Modality.AUDIO.value}_{str(uuid.uuid5(uuid.NAMESPACE_OID, Modality.AUDIO.value))}"
+        transcript_collection = f"{Modality.TRANSCRIPT.value}_{str(uuid.uuid5(uuid.NAMESPACE_OID, Modality.TRANSCRIPT.value))}"
+        metadata_collection = f"{Modality.METADATA.value}_{str(uuid.uuid5(uuid.NAMESPACE_OID, Modality.METADATA.value))}"
+
+        embedders = {
+            Modality.AUDIO: CLAPQueryEmbedder(self.audio_embedder),
+            Modality.TRANSCRIPT: SentenceTransformerQueryEmbedder(self.text_embedder)
+        }
+        
+        vector_retrievers = {
+            Modality.AUDIO: QdrantVectorRetriever(self.vector_repository, Modality.AUDIO, audio_collection),
+            Modality.TRANSCRIPT: QdrantVectorRetriever(self.vector_repository, Modality.TRANSCRIPT, transcript_collection)
+        }
+        
+        metadata_retriever = QdrantMetadataRetriever(qdrant_client, metadata_collection)
+        
+        fusion_strategies = {
+            "rrf": ReciprocalRankFusion(k=60),
+            "weighted": WeightedFusionStrategy({Modality.AUDIO: 1.0, Modality.TRANSCRIPT: 1.0, Modality.METADATA: 1.0})
+        }
+        
+        reranker = MockCrossEncoderReranker()
+        payload_loader = PayloadLoaderImpl(self.media_repository)
+        
+        retrieval_planner = RetrievalPlanner(
+            event_bus=self.event_bus,
+            embedders=embedders,
+            vector_retrievers=vector_retrievers,
+            metadata_retriever=metadata_retriever,
+            fusion_strategies=fusion_strategies,
+            reranker=reranker,
+            payload_loader=payload_loader
+        )
+        
+        retrieval_orchestrator = RetrievalOrchestrator(
+            event_bus=self.event_bus,
+            planner=retrieval_planner
+        )
+        
+        self.retrieval_search_service = RetrievalSearchService(retrieval_orchestrator)
         
         # Hook up the broadcast callback if using AsyncEventBus
         if hasattr(self.event_bus, 'set_broadcast_callback'):

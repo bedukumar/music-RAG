@@ -118,13 +118,13 @@ class QdrantVectorRepository(VectorRepository):
         qdrant_filter = None
         
         def sync_search():
-            return self._client.search(
+            return self._client.query_points(
                 collection_name=collection,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=limit,
                 query_filter=qdrant_filter,
                 with_payload=True,
-            )
+            ).points
 
         loop = asyncio.get_event_loop()
         try:

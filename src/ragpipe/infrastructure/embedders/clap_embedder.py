@@ -49,6 +49,12 @@ class CLAPEmbedder(AudioEmbeddingProvider):
     def modality(self) -> Modality:
         return Modality.AUDIO
 
+    async def embed(self, data: object) -> np.ndarray:
+        raise NotImplementedError("Use embed_audio for CLAPEmbedder")
+
+    async def embed_batch(self, data_list: list) -> np.ndarray:
+        raise NotImplementedError("Use embed_audio_batch for CLAPEmbedder")
+
     async def _ensure_loaded(self) -> None:
         """Load the model lazily on first use."""
         if self._model is not None:
@@ -158,3 +164,21 @@ class CLAPEmbedder(AudioEmbeddingProvider):
             vectors.append(vec[0])
             
         return np.vstack(vectors)
+
+    async def embed_text(self, text: str) -> np.ndarray:
+        """Embed a text query into the audio vector space.
+        
+        Args:
+            text: Text query describing audio.
+            
+        Returns:
+            Numpy array of shape (1, 512).
+        """
+        await self._ensure_loaded()
+
+        def embed_sync():
+            # get_text_embedding expects a list of strings
+            return self._model.get_text_embedding([text], use_tensor=False)
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, embed_sync)
