@@ -85,7 +85,7 @@ RagPipe processes audio files, extracts embeddings using advanced audio models (
   ruff check src tests
   mypy src
   ```
-
+ 
 ## License
 
 This project is licensed under the MIT License.
