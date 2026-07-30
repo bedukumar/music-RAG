@@ -91,7 +91,6 @@ ragpipe.db
 *.ogg
 *.m4a
 
-frontend/
 
 # Data / Uploads
 frontend/data/
@@ -121,6 +120,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+package-lock.json
 
 h.txt
 node.tar.xz

@@ -1,0 +1,872 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Backgrounds — layered elevation via border, not shadow */
+  --bg-app:   #080808;
+  --bg-1:     #101010;
+  --bg-2:     #161616;
+  --bg-3:     #1c1c1c;
+  --bg-4:     #242424;
+
+  /* Borders */
+  --border-1: #1c1c1c;
+  --border-2: #252525;
+  --border-3: #333333;
+
+  /* Text */
+  --text-1:   #e8e8e8;
+  --text-2:   #818181;
+  --text-3:   #484848;
+
+  /* Single accent — used only for interactive/active state */
+  --accent:        #5b5bd6;
+  --accent-hover:  #6872f5;
+  --accent-bg:     rgba(91, 91, 214, 0.09);
+  --accent-border: rgba(91, 91, 214, 0.25);
+
+  /* Status — only for badges and icons, never backgrounds */
+  --success:    #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.07);
+  --warning:    #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.07);
+  --danger:     #ef4444;
+  --danger-bg:  rgba(239, 68, 68, 0.07);
+  --info:       #3b82f6;
+  --info-bg:    rgba(59, 130, 246, 0.07);
+
+  /* Typography — single font */
+  --font:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Menlo', monospace;
+
+  /* Radii — tight, no pills */
+  --r-1: 3px;
+  --r-2: 5px;
+  --r-3: 8px;
+
+  /* Shadows — directional only, zero color */
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.40);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.50);
+  --shadow-3: 0 8px 32px rgba(0,0,0,0.65);
+
+  /* Transitions */
+  --t-fast:   100ms ease;
+  --t-normal: 180ms ease;
+
+  /* ── Legacy variable aliases (keep old inline styles working) ── */
+  --accent-primary:   var(--accent);
+  --accent-secondary: var(--accent);
+  --accent-tertiary:  var(--accent);
+  --accent-light:     var(--accent-bg);
+  --text-primary:     var(--text-1);
+  --text-secondary:   var(--text-2);
+  --text-tertiary:    var(--text-3);
+  --bg-primary:       var(--bg-app);
+  --bg-secondary:     var(--bg-2);
+  --bg-tertiary:      var(--bg-3);
+  --bg-glass:         var(--bg-2);
+  --surface-50:       var(--bg-2);
+  --surface-100:      var(--bg-2);
+  --surface-200:      var(--bg-3);
+  --border:           var(--border-2);
+  --border-glass:     var(--border-1);
+  --border-focus:     var(--accent);
+  --radius-sm:        var(--r-1);
+  --radius-md:        var(--r-2);
+  --radius-lg:        var(--r-3);
+  --radius-xl:        var(--r-3);
+  --radius-full:      var(--r-3);
+  --shadow-glass:     var(--shadow-2);
+  --shadow-glow:      var(--shadow-2);
+  --font-sans:        var(--font);
+  --font-display:     var(--font);
+  --transition-fast:  var(--t-fast);
+  --transition-normal:var(--t-normal);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-app);
+  color: var(--text-1);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font);
+  font-weight: 600;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font);
+}
+
+/* ============================================================
+   APPLICATION LAYOUT
+   ============================================================ */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-1);
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.sidebar-logo {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-1);
+  gap: 8px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-footer {
+  padding: 8px;
+  border-top: 1px solid var(--border-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  margin-left: 220px;
+  padding: 40px 48px;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  height: 30px;
+  border-radius: var(--r-2);
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color var(--t-fast), background var(--t-fast);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  letter-spacing: -0.01em;
+}
+
+.nav-link:hover {
+  color: var(--text-1);
+  background: var(--bg-2);
+}
+
+.nav-link.active {
+  color: var(--text-1);
+  background: var(--bg-3);
+  font-weight: 500;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* Legacy heading classes — remapped to new scale */
+.heading-1  { font-size: 18px;  font-weight: 600; letter-spacing: -0.03em; color: var(--text-1); line-height: 1.2; }
+.heading-2  { font-size: 15px;  font-weight: 600; letter-spacing: -0.02em; color: var(--text-1); line-height: 1.3; }
+.heading-3  { font-size: 13px;  font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); line-height: 1.4; }
+.heading-4  { font-size: 12.5px;font-weight: 600; color: var(--text-1);    line-height: 1.4; }
+.text-muted    { font-size: 13px; color: var(--text-2); }
+.text-secondary { color: var(--text-2); font-size: 13px; }
+.text-small    { font-size: 12px; color: var(--text-3); }
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+/* ============================================================
+   CARDS & SURFACES
+   ============================================================ */
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-3);
+  padding: 16px;
+}
+
+/* Legacy compat */
+.glass-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-3);
+  padding: 16px;
+}
+
+.glass-card:hover {
+  background: var(--bg-2);
+  border-color: var(--border-2);
+  transform: none;
+  box-shadow: none;
+}
+
+.glass-panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-3);
+}
+
+.stat-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-3);
+  padding: 20px 24px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-meta {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-2);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), opacity var(--t-fast);
+  white-space: nowrap;
+  border: 1px solid transparent;
+  line-height: 1;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-1);
+  border-color: var(--border-3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-2);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  border: 1px solid var(--border-2);
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all var(--t-fast);
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  background: var(--bg-2);
+  color: var(--text-1);
+  border-color: var(--border-3);
+}
+
+/* ============================================================
+   FORM CONTROLS
+   ============================================================ */
+.input-field,
+.input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-2);
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: 13px;
+  transition: border-color var(--t-fast);
+  outline: none;
+}
+
+.input-field:hover,
+.input:hover {
+  border-color: var(--border-3);
+}
+
+.input-field:focus,
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.input-field::placeholder,
+.input::placeholder {
+  color: var(--text-3);
+}
+
+.input-field:disabled,
+.input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+textarea.input-field,
+textarea.input {
+  height: auto;
+  padding: 8px 10px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+select.input-field,
+select.input,
+.glass-select {
+  width: 100%;
+  height: 32px;
+  padding: 0 30px 0 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-2);
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23484848' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  transition: border-color var(--t-fast);
+}
+
+select.input-field:focus,
+select.input:focus,
+.glass-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+select.input-field option,
+select.input option,
+.glass-select option {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* Range slider */
+.range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border-3);
+  outline: none;
+  cursor: pointer;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--text-1);
+  cursor: pointer;
+  border: 2px solid var(--accent);
+  transition: transform var(--t-fast);
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--bg-4);
+  border: 1px solid var(--border-3);
+  border-radius: 9px;
+  transition: background var(--t-normal), border-color var(--t-normal);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 2px;
+  top: 2px;
+  background: var(--text-3);
+  border-radius: 50%;
+  transition: transform var(--t-normal), background var(--t-normal);
+}
+
+input:checked + .toggle-slider {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+input:checked + .toggle-slider::before {
+  transform: translateX(14px);
+  background: white;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ============================================================
+   BADGES / STATUS INDICATORS
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--r-1);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  color: var(--text-2);
+  background: var(--bg-3);
+  border-color: var(--border-2);
+}
+
+.badge-success {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: rgba(34, 197, 94, 0.15);
+}
+
+.badge-warning {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.badge-danger {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.badge-info {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.badge-primary,
+.badge-accent {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-3);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-1);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-1);
+  color: var(--text-1);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr {
+  transition: background var(--t-fast);
+}
+
+.table tbody tr:hover {
+  background: var(--bg-2);
+}
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+.flex         { display: flex; }
+.flex-col     { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center  { justify-content: center; }
+.justify-end     { justify-content: flex-end; }
+.flex-1          { flex: 1; }
+.flex-wrap       { flex-wrap: wrap; }
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.gap-6 { gap: 24px; }
+.gap-8 { gap: 32px; }
+
+.grid         { display: grid; }
+.grid-cols-1  { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2  { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3  { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4  { grid-template-columns: repeat(4, 1fr); }
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  color: var(--text-3);
+  font-size: 13px;
+  text-align: center;
+  gap: 8px;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-1);
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  backdrop-filter: none;
+}
+
+.modal {
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-3);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-3);
+  position: relative;
+}
+
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.modal-body {
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-1);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--bg-1);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+}
+
+/* ============================================================
+   CODE / MONO
+   ============================================================ */
+pre, code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.code-block {
+  background: var(--bg-app);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-2);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-1);
+  overflow-x: auto;
+  line-height: 1.65;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spinAnim {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseAnim {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.animate-fade-in {
+  animation: fadeUp 200ms ease both;
+}
+
+.spin {
+  animation: spinAnim 650ms linear infinite;
+}
+
+.animate-pulse {
+  animation: pulseAnim 1.4s ease infinite;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: var(--bg-3);
+  background-image: linear-gradient(
+    90deg,
+    var(--bg-3) 0px,
+    var(--bg-4) 100px,
+    var(--bg-3) 200px
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--r-2);
+}
+
+/* Override glass-card hover to not transform */
+.glass-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove stagger helpers (no longer needed) */
+.stagger-1, .stagger-2, .stagger-3, .stagger-4 {}
+
+/* Text gradient — removed, plain text only */
+.text-gradient {
+  color: var(--text-1);
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+}
