@@ -30,7 +30,10 @@ export interface RetrievedMedia {
 }
 
 export interface SearchResult {
-  media: RetrievedMedia;
+  media_id: string;
+  title: string;
+  media_type: string;
+  metadata: Record<string, any>;
   matched_chunks: RetrievedChunk[];
   overall_score: number;
 }

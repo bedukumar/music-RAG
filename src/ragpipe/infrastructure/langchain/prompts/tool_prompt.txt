@@ -1,0 +1,6 @@
+Available tools:
+{tool_descriptions}
+
+Tool outputs:
+{tool_outputs}
+

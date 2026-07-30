@@ -23,6 +23,9 @@ from ragpipe.application.services.enrichment_service import EnrichmentService
 from ragpipe.application.services.duplicate_detector import DuplicateDetector
 from ragpipe.application.services.system_manager import SystemManager
 from ragpipe.application.services.media_registrar import MediaRegistrar
+from ragpipe.application.services.media_query_service import MediaQueryService
+from ragpipe.application.services.collection_service import CollectionService
+from ragpipe.application.services.conversation_service import ConversationService
 from ragpipe.application.services.metadata_synchronizer import MetadataSynchronizer
 from ragpipe.application.services.recovery_manager import RecoveryManager
 from ragpipe.application.services.migration_manager import MigrationManager
@@ -31,16 +34,24 @@ from ragpipe.application.services.status_service import StatusService
 from ragpipe.domain.models.chunk import ChunkingConfig
 from ragpipe.domain.models.embedding import EmbeddingVersion
 from ragpipe.domain.models.modality import Modality
+from ragpipe.config.settings import get_settings
 from ragpipe.infrastructure.chunkers.audio.fixed_duration import FixedDurationChunker
 from ragpipe.infrastructure.chunkers.metadata.field_concatenator import FieldConcatenator
 from ragpipe.infrastructure.chunkers.text.sentence_chunker import SentenceChunker
 from ragpipe.infrastructure.database.models import Base
+from ragpipe.infrastructure.database.conversation_repository import SQLAlchemyConversationRepository
 from ragpipe.infrastructure.database.media_repository import SQLAlchemyMediaRepository
 from ragpipe.infrastructure.database.state_store import SQLAlchemyStateStore
 from ragpipe.infrastructure.embedders.clap_embedder import CLAPEmbedder
 from ragpipe.infrastructure.embedders.mock_embedder import MockAudioEmbedder, MockTextEmbedder
 from ragpipe.infrastructure.embedders.sentence_transformer import SentenceTransformerEmbedder
 from ragpipe.infrastructure.events.async_event_bus import AsyncEventBus
+from ragpipe.infrastructure.langchain.conversation_chain import ConversationChain
+from ragpipe.infrastructure.langchain.memory_provider import MemoryProvider
+from ragpipe.infrastructure.langchain.prompt_builder import PromptBuilder
+from ragpipe.infrastructure.langchain.provider import GeminiChatProvider
+from ragpipe.infrastructure.langchain.retriever_provider import RetrieverProvider
+from ragpipe.infrastructure.langchain.tool_executor import ToolExecutor
 from ragpipe.infrastructure.locking.db_lock_manager import DatabaseLockManager
 from ragpipe.infrastructure.metrics.prometheus_metrics import PrometheusMetricsCollector
 from ragpipe.infrastructure.storage.local_file_storage import LocalFileStorage
@@ -83,6 +94,7 @@ class Container:
         self.media_repository: Optional[SQLAlchemyMediaRepository] = None
         self.state_store: Optional[SQLAlchemyStateStore] = None
         self.lock_manager: Optional[DatabaseLockManager] = None
+        self.conversation_repository = None
         
         # Services
         self.media_registrar: Optional[MediaRegistrar] = None
@@ -99,9 +111,18 @@ class Container:
         self.duplicate_detector: Optional[DuplicateDetector] = None
         self.system_manager: Optional[SystemManager] = None
         self.recovery_manager: Optional[RecoveryManager] = None
+        self.media_query_service: Optional[MediaQueryService] = None
+        self.collection_service: Optional[CollectionService] = None
+        self.conversation_service: Optional[ConversationService] = None
         
         # Retrieval Pipeline
         self.retrieval_search_service: Optional[RetrievalSearchService] = None
+        self.retriever_provider = None
+        self.tool_executor = None
+        self.prompt_builder = None
+        self.memory_provider = None
+        self.llm_provider = None
+        self.conversation_chain = None
         
         # Embedders
         self.audio_embedder = CLAPEmbedder(enable_fusion=False)
@@ -137,6 +158,7 @@ class Container:
         self.media_repository = SQLAlchemyMediaRepository(self._shared_session)
         self.state_store = SQLAlchemyStateStore(self._shared_session)
         self.lock_manager = DatabaseLockManager(self._shared_session)
+        self.conversation_repository = SQLAlchemyConversationRepository(self._shared_session)
         
         # Initialize Mock Qdrant collections so ingestion pipelines don't fail
         import uuid
@@ -244,6 +266,52 @@ class Container:
         )
         
         self.retrieval_search_service = RetrievalSearchService(retrieval_orchestrator)
+
+        settings = get_settings()
+        self.prompt_builder = PromptBuilder()
+        self.memory_provider = MemoryProvider(
+            self.conversation_repository,
+            default_window=settings.conversation.memory_window,
+        )
+        self.retriever_provider = RetrieverProvider(retrieval_planner)
+        self.llm_provider = GeminiChatProvider(
+            model=settings.conversation.model_name,
+            max_output_tokens=settings.conversation.max_output_tokens,
+        )
+        self.media_query_service = MediaQueryService(
+            self.media_repository,
+            self.status_service,
+            self.retrieval_search_service,
+        )
+        self.collection_service = CollectionService(self.vector_repository)
+        self.tool_executor = ToolExecutor(
+            self.retriever_provider,
+            self.media_query_service,
+            self.collection_service,
+            self.status_service,
+        )
+        self.conversation_chain = ConversationChain(
+            self.llm_provider,
+            self.prompt_builder,
+            self.memory_provider,
+            self.retriever_provider,
+            self.tool_executor,
+        )
+        self.conversation_service = ConversationService(
+            self.conversation_repository,
+            self.llm_provider,
+            self.prompt_builder,
+            self.memory_provider,
+            self.retriever_provider,
+            self.tool_executor,
+            self.media_query_service,
+            self.collection_service,
+            self.status_service,
+            self.metrics,
+            default_memory_window=settings.conversation.memory_window,
+            default_system_prompt_version=settings.conversation.system_prompt_version,
+        )
+        self.tool_executor.bind_history_loader(self.conversation_service.get_history_payload)
         
         # Hook up the broadcast callback if using AsyncEventBus
         if hasattr(self.event_bus, 'set_broadcast_callback'):

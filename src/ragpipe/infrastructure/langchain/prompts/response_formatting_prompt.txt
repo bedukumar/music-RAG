@@ -1,0 +1,12 @@
+Return a final answer with:
+- assistant message
+- citations
+- retrieved media ids
+- tool calls
+- latency information
+- token usage
+- conversation id
+- message id
+
+Format clearly and do not omit citations when retrieval was used.
+

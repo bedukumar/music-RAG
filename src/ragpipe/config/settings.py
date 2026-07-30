@@ -142,6 +142,19 @@ class MetricsSettings(BaseSettings):
     prefix: str = Field(default="ragpipe")
 
 
+class ConversationSettings(BaseSettings):
+    """Conversation backend settings."""
+
+    model_config = SettingsConfigDict(env_prefix="RAGPIPE_CHAT_")
+
+    memory_window: int = Field(default=12, ge=1, le=100)
+    system_prompt_version: str = Field(default="v1")
+    model_name: str = Field(default="gemini-2.5-flash")
+    max_output_tokens: int = Field(default=1024, ge=1, le=8192)
+    default_top_k: int = Field(default=8, ge=1, le=100)
+    default_page_size: int = Field(default=10, ge=1, le=100)
+
+
 class Settings(BaseSettings):
     """Root application settings aggregating all sub-settings."""
 
@@ -176,6 +189,7 @@ class Settings(BaseSettings):
     _clap: Optional[CLAPSettings] = None
     _lock: Optional[LockSettings] = None
     _metrics: Optional[MetricsSettings] = None
+    _conversation: Optional[ConversationSettings] = None
 
     @property
     def database(self) -> DatabaseSettings:
@@ -246,6 +260,13 @@ class Settings(BaseSettings):
         if self._metrics is None:
             self._metrics = MetricsSettings()
         return self._metrics
+
+    @property
+    def conversation(self) -> ConversationSettings:
+        """Get conversation settings."""
+        if self._conversation is None:
+            self._conversation = ConversationSettings()
+        return self._conversation
 
     @field_validator("log_level")
     @classmethod

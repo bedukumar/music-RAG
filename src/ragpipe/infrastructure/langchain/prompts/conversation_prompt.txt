@@ -1,0 +1,6 @@
+Conversation context:
+{conversation_history}
+
+Current user message:
+{user_message}
+

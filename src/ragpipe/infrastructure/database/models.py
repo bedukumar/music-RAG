@@ -280,3 +280,56 @@ class LockORM(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+
+
+class ConversationORM(Base):
+    """ORM model for persisted conversations."""
+
+    __tablename__ = "conversations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    system_prompt_version: Mapped[str] = mapped_column(String(50), default="v1", nullable=False)
+    memory_window: Mapped[int] = mapped_column(Integer, default=12, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+    last_message_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    messages: Mapped[list["ConversationMessageORM"]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", order_by="ConversationMessageORM.created_at"
+    )
+
+
+class ConversationMessageORM(Base):
+    """ORM model for persisted conversation messages."""
+
+    __tablename__ = "conversation_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    tool_calls: Mapped[list] = mapped_column(JSON, default=list)
+    tool_results: Mapped[list] = mapped_column(JSON, default=list)
+    retrieval_context: Mapped[list] = mapped_column(JSON, default=list)
+    citations: Mapped[list] = mapped_column(JSON, default=list)
+    system_prompt_version: Mapped[str] = mapped_column(String(50), default="v1", nullable=False)
+    message_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    conversation: Mapped["ConversationORM"] = relationship(back_populates="messages")
+
+    __table_args__ = (
+        Index("idx_conversation_messages_conversation_created", "conversation_id", "created_at"),
+        Index("idx_conversation_messages_role", "role"),
+    )

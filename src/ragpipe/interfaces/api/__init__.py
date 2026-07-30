@@ -1,6 +1,5 @@
 """
 API Module Init.
 """
-from ragpipe.interfaces.api.router import main_router
-
-__all__ = ["main_router"]
+# Intentionally avoid eager imports here so tests can import individual
+# routers without pulling the full application graph into memory.

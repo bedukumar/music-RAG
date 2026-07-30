@@ -8,7 +8,7 @@ export default function ResultCard({ result, rank }: { result: SearchResult; ran
   const [expanded, setExpanded] = useState(false);
   const { toggleResultSelection, selectedResults } = useSearchStore();
 
-  const isSelected       = selectedResults.includes(result.media.media_id);
+  const isSelected       = selectedResults.includes(result?.media_id);
   const hasAudio         = result.matched_chunks.some(c => c.modality === 'audio');
   const hasTranscript    = result.matched_chunks.some(c => c.modality === 'transcript');
   const hasMetadata      = result.matched_chunks.some(c => c.modality === 'metadata');
@@ -81,12 +81,12 @@ export default function ResultCard({ result, rank }: { result: SearchResult; ran
                 textOverflow: 'ellipsis',
               }}
             >
-              {result.media.title}
+              {result.title}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                {result.media.metadata?.artist || 'Unknown Artist'}
-                {result.media.metadata?.album ? ` — ${result.media.metadata.album}` : ''}
+                {result.metadata?.artist || 'Unknown Artist'}
+                {result.metadata?.album ? ` — ${result.metadata.album}` : ''}
               </span>
             </div>
           </div>
@@ -108,7 +108,7 @@ export default function ResultCard({ result, rank }: { result: SearchResult; ran
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => toggleResultSelection(result.media.media_id)}
+            onChange={() => toggleResultSelection(result.media_id)}
             style={{ cursor: 'pointer' }}
           />
           <button

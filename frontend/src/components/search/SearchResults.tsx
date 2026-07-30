@@ -49,7 +49,7 @@ export default function SearchResults() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {results.map((result, idx) => (
           <ResultCard
-            key={`${result.media.media_id}-${idx}`}
+            key={`${result?.media_id}-${idx}`}
             result={result}
             rank={idx + 1}
           />

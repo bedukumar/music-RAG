@@ -1,0 +1,8 @@
+Use the retrieval pipeline to answer the user's question when it concerns songs, media, lyrics, transcripts, metadata, audio, or search.
+
+Search configuration:
+{search_config}
+
+Retrieved context:
+{retrieved_context}
+

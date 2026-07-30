@@ -10,6 +10,7 @@ import SearchPage from './pages/Search';
 import SearchHistory from './pages/SearchHistory';
 import SearchAnalytics from './pages/SearchAnalytics';
 import SearchSettings from './pages/SearchSettings';
+import ThemeToggle from './components/ThemeToggle';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
 
           {/* Footer navigation */}
           <div className="sidebar-footer">
+            <ThemeToggle />
             <NavLink
               to="/settings"
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}

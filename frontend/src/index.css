@@ -870,3 +870,88 @@ pre, code {
   -webkit-text-fill-color: unset;
   background-clip: unset;
 }
+
+/* ============================================================
+   LIGHT MODE THEME
+   Applied via [data-theme="light"] on <html>
+   ============================================================ */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-app: #ffffff;
+  --bg-1:   #f7f7f7;
+  --bg-2:   #f0f0f0;
+  --bg-3:   #e8e8e8;
+  --bg-4:   #dedede;
+
+  /* Borders */
+  --border-1: #e8e8e8;
+  --border-2: #dcdcdc;
+  --border-3: #c8c8c8;
+
+  /* Text */
+  --text-1: #0d0d0d;
+  --text-2: #5a5a5a;
+  --text-3: #9a9a9a;
+
+  /* Accent — same hue, slightly deeper for light-bg contrast */
+  --accent:        #4b4acf;
+  --accent-hover:  #5b5bd6;
+  --accent-bg:     rgba(75, 74, 207, 0.07);
+  --accent-border: rgba(75, 74, 207, 0.20);
+
+  /* Status backgrounds — lighter tints for light mode */
+  --success-bg: rgba(34, 197, 94, 0.07);
+  --warning-bg: rgba(245, 158, 11, 0.07);
+  --danger-bg:  rgba(239, 68, 68, 0.07);
+  --info-bg:    rgba(59, 130, 246, 0.07);
+
+  /* Shadows — soft, directional */
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+  /* Legacy aliases — cascade from new values automatically */
+}
+
+/* Light mode modal overlay */
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Light mode skeleton */
+[data-theme="light"] .skeleton {
+  background: var(--bg-2);
+  background-image: linear-gradient(
+    90deg,
+    var(--bg-2) 0px,
+    var(--bg-3) 100px,
+    var(--bg-2) 200px
+  );
+}
+
+/* Light mode code blocks */
+[data-theme="light"] .code-block {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+
+/* Smooth theme transition */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 180ms ease,
+    border-color     180ms ease,
+    color            100ms ease;
+}
+
+/* Exempt elements where transition causes flicker */
+input, select, textarea, button {
+  transition:
+    background-color 100ms ease,
+    border-color     100ms ease,
+    color            80ms ease,
+    opacity          100ms ease,
+    transform        100ms ease;
+}
+

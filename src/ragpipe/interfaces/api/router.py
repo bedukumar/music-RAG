@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from ragpipe.interfaces.api.health_routes import router as health_router
 from ragpipe.interfaces.api.chunk_routes import router as chunk_router
+from ragpipe.interfaces.api.chat_routes import router as chat_router
 from ragpipe.interfaces.api.collection_routes import router as collection_router
 from ragpipe.interfaces.api.duplicate_routes import router as duplicate_router
 from ragpipe.interfaces.api.embedding_routes import master_router as embedding_router
@@ -24,6 +25,7 @@ from ragpipe.interfaces.api.websocket_routes import router as websocket_router
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(media_router)
 api_router.include_router(chunk_router)
+api_router.include_router(chat_router)
 api_router.include_router(collection_router)
 api_router.include_router(duplicate_router)
 api_router.include_router(embedding_router)
