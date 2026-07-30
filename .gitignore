@@ -20,7 +20,6 @@ parts/
 sdist/
 var/
 node/
-frontend/
 wheels/
 graphify-out/
 .agents/
