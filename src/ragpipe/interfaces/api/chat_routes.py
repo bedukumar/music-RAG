@@ -127,6 +127,16 @@ async def delete_conversation(
     return {"status": "deleted", "conversation_id": conversation_id}
 
 
+@router.delete("/conversation/{conversation_id}/truncate/{message_id}")
+async def truncate_conversation(
+    conversation_id: str,
+    message_id: str,
+    conversation_service=Depends(get_conversation_service),
+):
+    await conversation_service.truncate_conversation(conversation_id, message_id)
+    return {"status": "truncated", "conversation_id": conversation_id, "message_id": message_id}
+
+
 @router.post("", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,

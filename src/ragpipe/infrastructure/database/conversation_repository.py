@@ -202,3 +202,34 @@ class SQLAlchemyConversationRepository(ConversationRepository):
             delete(ConversationORM).where(ConversationORM.id == conversation_id)
         )
         await self._session.commit()
+
+    async def truncate_conversation(self, conversation_id: str, message_id: str) -> None:
+        stmt = select(ConversationMessageORM.created_at).where(
+            ConversationMessageORM.id == message_id,
+            ConversationMessageORM.conversation_id == conversation_id
+        )
+        result = await self._session.execute(stmt)
+        target_time = result.scalar_one_or_none()
+        
+        if not target_time:
+            return
+
+        del_stmt = delete(ConversationMessageORM).where(
+            ConversationMessageORM.conversation_id == conversation_id,
+            ConversationMessageORM.created_at >= target_time
+        )
+        await self._session.execute(del_stmt)
+        
+        latest_msg_stmt = select(ConversationMessageORM.created_at).where(
+            ConversationMessageORM.conversation_id == conversation_id
+        ).order_by(ConversationMessageORM.created_at.desc()).limit(1)
+        latest_msg_result = await self._session.execute(latest_msg_stmt)
+        last_message_at = latest_msg_result.scalar_one_or_none()
+        
+        conv_stmt = select(ConversationORM).where(ConversationORM.id == conversation_id)
+        conv_result = await self._session.execute(conv_stmt)
+        conv = conv_result.scalar_one_or_none()
+        if conv:
+            conv.last_message_at = last_message_at
+            
+        await self._session.commit()

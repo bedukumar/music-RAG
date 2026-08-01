@@ -8,6 +8,10 @@ import uuid
 from dataclasses import replace
 from typing import Any, AsyncIterator, Optional
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 from ragpipe.application.services.collection_service import CollectionService
 from ragpipe.application.services.media_query_service import MediaQueryService
 from ragpipe.application.services.status_service import StatusService
@@ -103,6 +107,10 @@ class ConversationService:
     async def delete_conversation(self, conversation_id: str) -> None:
         await self.conversation_repo.delete_conversation(conversation_id)
 
+    async def truncate_conversation(self, conversation_id: str, message_id: str) -> None:
+        """Truncate a conversation by deleting a message and all subsequent messages."""
+        await self.conversation_repo.truncate_conversation(conversation_id, message_id)
+
     async def chat(
         self,
         *,
@@ -127,7 +135,7 @@ class ConversationService:
         start_time = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
-            title=title or self._derive_title(message),
+            title=title or await self._derive_title(message),
         )
         user_message = ConversationMessage.create(
             conversation_id=conversation.id,
@@ -303,7 +311,7 @@ class ConversationService:
         start_time = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
-            title=title or self._derive_title(message),
+            title=title or await self._derive_title(message),
         )
         user_message = ConversationMessage.create(
             conversation_id=conversation.id,
@@ -541,6 +549,9 @@ class ConversationService:
         if conversation_id:
             conversation = await self.conversation_repo.get_conversation(conversation_id)
             if conversation:
+                if conversation.title in ("New Conversation", "New conversation") and title and title != conversation.title:
+                    conversation = replace(conversation, title=title)
+                    await self.conversation_repo.update_conversation(conversation)
                 return conversation
             raise ValueError(f"Conversation not found: {conversation_id}")
         return await self.create_conversation(title)
@@ -591,7 +602,21 @@ class ConversationService:
         ]
         return any(keyword in lowered for keyword in keywords)
 
-    def _derive_title(self, message: str) -> str:
+    async def _derive_title(self, message: str) -> str:
+        try:
+            messages = [
+                {
+                    "role": "system", 
+                    "content": "You are a helpful assistant. Generate a very short (3-5 words) title for a conversation that begins with the following message. Respond ONLY with the title. Do not use quotes or prefixes."
+                },
+                {"role": "user", "content": message}
+            ]
+            response = await self.llm_provider.acomplete(messages)
+            title = response.get("content", "").strip().strip('"\'')
+            if title:
+                return title
+        except Exception as e:
+            logger.error("failed_to_derive_title", error=str(e))
         return message.strip()[:64] or "New conversation"
 
     # ------------------------------------------------------------------

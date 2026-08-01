@@ -60,9 +60,13 @@ const Chat: React.FC = () => {
     }
   };
 
+
   const handleUpdateTitle = (id: string, newTitle: string) => {
-    const updated = conversations.map(c => c.id === id ? { ...c, title: newTitle } : c);
-    saveConversations(updated);
+    setConversations(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, title: newTitle } : c);
+      localStorage.setItem('ragpipe_conversations', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (

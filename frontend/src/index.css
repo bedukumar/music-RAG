@@ -107,7 +107,7 @@ body {
   background: var(--bg-app);
   color: var(--text-1);
   line-height: 1.5;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -129,22 +129,25 @@ button {
    ============================================================ */
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 /* Sidebar */
 .sidebar {
   width: 220px;
+  height: 100vh;
   flex-shrink: 0;
   border-right: 1px solid var(--border-1);
   background: var(--bg-app);
   display: flex;
   flex-direction: column;
-  position: fixed;
+/*  position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 100; */
   overflow: hidden;
 }
 
@@ -178,9 +181,8 @@ button {
 /* Main content */
 .main-content {
   flex: 1;
-  margin-left: 220px;
   padding: 40px 48px;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 /* ============================================================

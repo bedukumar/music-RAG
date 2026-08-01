@@ -57,6 +57,7 @@ export const ChatAPI = {
   getConversation: (id: string) => api.get(`/chat/conversation/${id}`).then(res => res.data),
   getMessages: (id: string) => api.get(`/chat/conversation/${id}/messages`).then(res => res.data),
   deleteConversation: (id: string) => api.delete(`/chat/conversation/${id}`).then(res => res.data),
+  truncateConversation: (conversationId: string, messageId: string) => api.delete(`/chat/conversation/${conversationId}/truncate/${messageId}`).then(res => res.data),
   chat: (data: any) => api.post('/chat', data).then(res => res.data),
   streamChat: async function* (data: any) {
     const response = await fetch('/api/v1/chat/stream', {

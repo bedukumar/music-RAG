@@ -14,6 +14,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
@@ -42,6 +43,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleRewind = async (messageId: string, content: string) => {
+    try {
+      await ChatAPI.truncateConversation(conversationId, messageId);
+      setEditValue(content);
+      fetchMessages();
+    } catch (err) {
+      console.error('Error rewinding conversation:', err);
+    }
+  };
 
   const handleSend = async (content: string) => {
     const userMsg: Message = {
@@ -110,6 +121,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
                 key={msg.id}
                 message={msg}
                 isStreaming={isStreaming && msg.id === streamingMessageId && msg.content.length > 0}
+                onRewind={msg.role === 'user' ? handleRewind : undefined}
               />
             ))
           )}
@@ -132,7 +144,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
         </div>
       </div>
       <div className="chat-input-inner">
-        <ChatInput onSend={handleSend} disabled={isStreaming} />
+        <ChatInput 
+          onSend={handleSend} 
+          disabled={isStreaming} 
+          valueToEdit={editValue}
+          onEditClear={() => setEditValue('')}
+        />
       </div>
     </div>
   );

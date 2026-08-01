@@ -3,7 +3,8 @@
    ============================================================ */
 .chat-layout {
   display: flex;
-  height: calc(100vh - 32px); /* Account for overall app padding if any */
+  /*height: calc(100vh - 32px); /* Account for overall app padding if any */
+  height: 100%; /* Account for overall app padding if any */
   width: 100%;
   gap: 20px;
   overflow: hidden;
@@ -15,6 +16,7 @@
    ============================================================ */
 .chat-sidebar {
   width: 280px;
+  height: 100%;
   background-color: var(--bg-1);
   border: 1px solid var(--border-1);
   border-radius: var(--r-3);
@@ -581,4 +583,38 @@
 
 .message-content.streaming p:last-child {
   display: inline;
+}
+
+/* ============================================================
+   MESSAGE ACTIONS
+   ============================================================ */
+.message-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.message-row:hover .message-actions {
+  opacity: 1;
+}
+
+.action-button {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  color: var(--accent);
+  background: var(--bg-2);
 }

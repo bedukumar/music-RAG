@@ -4,11 +4,20 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  valueToEdit?: string;
+  onEditClear?: () => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, valueToEdit, onEditClear }) => {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (valueToEdit) {
+      setValue(valueToEdit);
+      if (onEditClear) onEditClear();
+    }
+  }, [valueToEdit, onEditClear]);
 
   useEffect(() => {
     if (textareaRef.current) {

@@ -47,3 +47,7 @@ class ConversationRepository(ABC):
     @abstractmethod
     async def delete_conversation(self, conversation_id: str) -> None:
         """Delete a conversation and its messages."""
+
+    @abstractmethod
+    async def truncate_conversation(self, conversation_id: str, message_id: str) -> None:
+        """Delete a specific message and all subsequent messages in a conversation."""
