@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface Citation {
   media_id?: string;
@@ -13,31 +15,27 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   citations?: Citation[];
-  // Other fields like tool_calls can be added here
 }
 
 interface ChatMessageProps {
   message: Message;
+  isStreaming?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isStreaming }) => {
   return (
     <div className={`message-row ${message.role}`}>
       <div className="message-bubble">
-        <div className="message-content">
-          {message.content}
+        <div className={`message-content${isStreaming ? ' streaming' : ''}`}>
+          {message.role === 'assistant' ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            message.content
+          )}
+          {isStreaming && <span className="streaming-cursor">▍</span>}
         </div>
-        {message.citations && message.citations.length > 0 && (
-          <div className="message-citations">
-            <div style={{ marginBottom: '4px', fontWeight: 500, color: 'var(--text-2)' }}>Sources:</div>
-            {message.citations.map((c, i) => (
-              <span key={i} className="citation-item">
-                {c.title || c.media_id || 'Unknown Source'}
-                {c.score && ` (${(c.score * 100).toFixed(1)}%)`}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -29,6 +29,13 @@ from ragpipe.infrastructure.langchain.retriever_provider import RetrievalContext
 from ragpipe.infrastructure.langchain.tool_executor import ToolExecutionContext, ToolExecutor
 
 
+# ---------------------------------------------------------------------------
+# Confidence thresholds used to calibrate LLM response tone
+# ---------------------------------------------------------------------------
+_HIGH_CONFIDENCE_THRESHOLD = 0.85
+_MEDIUM_CONFIDENCE_THRESHOLD = 0.50
+
+
 class ConversationService:
     """Top-level orchestration for conversational requests."""
 
@@ -60,6 +67,10 @@ class ConversationService:
         self.metrics = metrics
         self.default_memory_window = default_memory_window
         self.default_system_prompt_version = default_system_prompt_version
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     async def create_conversation(
         self,
@@ -109,6 +120,7 @@ class ConversationService:
         search_mode: str = "hybrid",
         page: int = 1,
         page_size: int = 10,
+        debug: bool = False,
     ) -> dict[str, Any]:
         """Execute a complete conversational turn."""
 
@@ -163,8 +175,12 @@ class ConversationService:
                 fusion_strategy=fusion_strategy,
             )
 
-        retrieved_context_text = self._render_retrieval_context(retrieval_context)
-        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_result_objects", []))
+        # Deduplicate and render clean context for the LLM
+        deduped = self._deduplicate_context(retrieval_context)
+        retrieved_context_text = self._render_retrieval_context(deduped)
+        tool_outputs_text = self._render_tool_outputs(
+            tool_summary.get("tool_result_objects", [])
+        )
 
         search_config = {
             "modalities": [mod.value for mod in (modalities or [Modality.AUDIO, Modality.TRANSCRIPT, Modality.METADATA])],
@@ -196,7 +212,7 @@ class ConversationService:
         usage = llm_response.get("usage", {}) or {}
         metadata = llm_response.get("metadata", {}) or {}
 
-        citations = self._build_citations(retrieval_context)
+        citations = self._build_citations(retrieval_context, debug=debug)
         tool_calls = tool_summary.get("tool_invocations", [])
         retrieved_media_ids = self._collect_media_ids(retrieval_context)
 
@@ -209,7 +225,7 @@ class ConversationService:
             tool_calls=tool_calls,
             tool_results=tool_summary.get("tool_result_objects", []),
             retrieval_context=retrieval_documents,
-            citations=citations,
+            citations=self._build_citations(retrieval_context, debug=True),  # Always store full citations internally
             system_prompt_version=conversation.system_prompt_version,
             metadata={
                 "llm_model": self.llm_provider.model_name(),
@@ -235,22 +251,34 @@ class ConversationService:
             token_usage=usage,
             conversation_id=conversation.id,
         )
-        return {
+
+        # Build the response — strip internal data in normal mode
+        response: dict[str, Any] = {
             "conversation_id": conversation.id,
             "message_id": assistant_message.id,
             "assistant_message": answer_text,
-            "citations": citations,
-            "retrieved_media_ids": retrieved_media_ids,
-            "tool_calls": [self._tool_call_to_dict(tool) for tool in tool_calls],
-            "latency_ms": {
+            "conversation_title": conversation.title,
+        }
+
+        if debug:
+            response["citations"] = citations
+            response["retrieved_media_ids"] = retrieved_media_ids
+            response["tool_calls"] = [self._tool_call_to_dict(tool) for tool in tool_calls]
+            response["latency_ms"] = {
                 "total": total_latency_ms,
                 "llm": llm_latency_ms,
                 "retrieval": float(retrieval_context.latency_ms) if retrieval_context else 0.0,
                 "tools": tool_summary.get("latency_ms", 0.0),
-            },
-            "token_usage": self._normalize_usage(usage),
-            "conversation_title": conversation.title,
-        }
+            }
+            response["token_usage"] = self._normalize_usage(usage)
+        else:
+            response["citations"] = []
+            response["retrieved_media_ids"] = []
+            response["tool_calls"] = []
+            response["latency_ms"] = {}
+            response["token_usage"] = {}
+
+        return response
 
     async def stream_chat(
         self,
@@ -269,6 +297,7 @@ class ConversationService:
         search_mode: str = "hybrid",
         page: int = 1,
         page_size: int = 10,
+        debug: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream a chat turn as SSE-friendly event payloads."""
         start_time = time.perf_counter()
@@ -321,8 +350,12 @@ class ConversationService:
                 fusion_strategy=fusion_strategy,
             )
 
-        retrieved_context_text = self._render_retrieval_context(retrieval_context)
-        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_result_objects", []))
+        # Deduplicate and render clean context for the LLM
+        deduped = self._deduplicate_context(retrieval_context)
+        retrieved_context_text = self._render_retrieval_context(deduped)
+        tool_outputs_text = self._render_tool_outputs(
+            tool_summary.get("tool_result_objects", [])
+        )
         search_config = {
             "modalities": [mod.value for mod in (modalities or [Modality.AUDIO, Modality.TRANSCRIPT, Modality.METADATA])],
             "filters": filters or {},
@@ -347,22 +380,25 @@ class ConversationService:
         )
 
         tool_calls = tool_summary.get("tool_invocations", [])
-        for tool_call in tool_calls:
-            yield {
-                "event": "tool",
-                "conversation_id": conversation.id,
-                "message_id": user_message.id,
-                "data": self._tool_call_to_dict(tool_call),
-            }
 
-        citations = self._build_citations(retrieval_context)
-        for citation in citations:
-            yield {
-                "event": "retrieval",
-                "conversation_id": conversation.id,
-                "message_id": user_message.id,
-                "data": citation,
-            }
+        # Only emit tool and retrieval events in debug mode
+        if debug:
+            for tool_call in tool_calls:
+                yield {
+                    "event": "tool",
+                    "conversation_id": conversation.id,
+                    "message_id": user_message.id,
+                    "data": self._tool_call_to_dict(tool_call),
+                }
+
+            citations = self._build_citations(retrieval_context, debug=True)
+            for citation in citations:
+                yield {
+                    "event": "retrieval",
+                    "conversation_id": conversation.id,
+                    "message_id": user_message.id,
+                    "data": citation,
+                }
 
         llm_start = time.perf_counter()
         answer_parts: list[str] = []
@@ -390,6 +426,10 @@ class ConversationService:
         answer_text = "".join(answer_parts).strip()
         llm_latency_ms = (time.perf_counter() - llm_start) * 1000
         retrieval_documents = retrieval_context.documents if retrieval_context else []
+
+        # Always store full citations internally for the database record
+        full_citations = self._build_citations(retrieval_context, debug=True)
+
         assistant_message = ConversationMessage.create(
             conversation_id=conversation.id,
             role=ChatRole.ASSISTANT,
@@ -397,7 +437,7 @@ class ConversationService:
             tool_calls=tool_calls,
             tool_results=tool_summary.get("tool_result_objects", []),
             retrieval_context=retrieval_documents,
-            citations=citations,
+            citations=full_citations,
             system_prompt_version=conversation.system_prompt_version,
             metadata={
                 "llm_model": self.llm_provider.model_name(),
@@ -421,26 +461,32 @@ class ConversationService:
             token_usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
             conversation_id=conversation.id,
         )
+
+        # Build completion payload — minimal in normal mode, full in debug
+        completion_data: dict[str, Any] = {
+            "conversation_id": conversation.id,
+            "message_id": assistant_message.id,
+            "assistant_message": answer_text,
+            "conversation_title": conversation.title,
+        }
+
+        if debug:
+            completion_data["citations"] = full_citations
+            completion_data["retrieved_media_ids"] = self._collect_media_ids(retrieval_context)
+            completion_data["tool_calls"] = [self._tool_call_to_dict(tool) for tool in tool_calls]
+            completion_data["latency_ms"] = {
+                "total": total_latency_ms,
+                "llm": llm_latency_ms,
+                "retrieval": float(retrieval_context.latency_ms) if retrieval_context else 0.0,
+                "tools": tool_summary.get("latency_ms", 0.0),
+            }
+            completion_data["token_usage"] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
         yield {
             "event": "completion",
             "conversation_id": conversation.id,
             "message_id": assistant_message.id,
-            "data": {
-                "conversation_id": conversation.id,
-                "message_id": assistant_message.id,
-                "assistant_message": answer_text,
-                "citations": citations,
-                "retrieved_media_ids": self._collect_media_ids(retrieval_context),
-                "tool_calls": [self._tool_call_to_dict(tool) for tool in tool_calls],
-                "latency_ms": {
-                    "total": total_latency_ms,
-                    "llm": llm_latency_ms,
-                    "retrieval": float(retrieval_context.latency_ms) if retrieval_context else 0.0,
-                    "tools": tool_summary.get("latency_ms", 0.0),
-                },
-                "token_usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-                "conversation_title": conversation.title,
-            },
+            "data": completion_data,
         }
 
     async def get_history_payload(self, conversation_id: str) -> dict[str, Any]:
@@ -486,6 +532,10 @@ class ConversationService:
                 for message in messages
             ],
         }
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
     async def _get_or_create_conversation(self, conversation_id: Optional[str], title: str) -> Conversation:
         if conversation_id:
@@ -544,47 +594,203 @@ class ConversationService:
     def _derive_title(self, message: str) -> str:
         return message.strip()[:64] or "New conversation"
 
-    def _render_retrieval_context(self, retrieval_context: Optional[RetrievalContext]) -> str:
+    # ------------------------------------------------------------------
+    # Deduplication
+    # ------------------------------------------------------------------
+
+    def _deduplicate_context(
+        self, retrieval_context: Optional[RetrievalContext]
+    ) -> list[dict[str, Any]]:
+        """Group retrieved chunks by media_id, merge content, keep highest score.
+
+        Returns a list of deduplicated media-level records with aggregated
+        information suitable for clean prompt rendering.
+        """
         if not retrieval_context or not retrieval_context.documents:
-            return "No retrieval context."
-        lines = []
-        for item in retrieval_context.documents[:8]:
-            meta = item["metadata"]
-            lines.append(
-                f"- {meta.get('title', 'Unknown')} [{meta.get('media_id')}] "
-                f"chunk={meta.get('chunk_id')} modality={meta.get('modality')} score={meta.get('score')}"
-            )
-        return "\n".join(lines)
+            return []
+
+        media_map: dict[str, dict[str, Any]] = {}
+        for doc in retrieval_context.documents:
+            meta = doc.get("metadata", {})
+            media_id = meta.get("media_id", "unknown")
+
+            if media_id not in media_map:
+                media_map[media_id] = {
+                    "media_id": media_id,
+                    "title": meta.get("title", "Unknown"),
+                    "media_type": meta.get("media_type", ""),
+                    "score": meta.get("overall_score", meta.get("score", 0.0)),
+                    "chunks": [],
+                    # Aggregate extra metadata fields when available
+                    "artist": meta.get("artist", ""),
+                    "album": meta.get("album", ""),
+                    "genre": meta.get("genre", ""),
+                    "year": meta.get("year", ""),
+                }
+            else:
+                # Keep the highest score
+                existing_score = media_map[media_id]["score"]
+                new_score = meta.get("overall_score", meta.get("score", 0.0))
+                if new_score > existing_score:
+                    media_map[media_id]["score"] = new_score
+
+            # Collect chunk content for merging
+            content = doc.get("content", "").strip()
+            if content and content not in [c["text"] for c in media_map[media_id]["chunks"]]:
+                media_map[media_id]["chunks"].append({
+                    "text": content,
+                    "modality": meta.get("modality", ""),
+                    "timestamps": meta.get("timestamps"),
+                })
+
+        # Sort by score descending
+        results = sorted(media_map.values(), key=lambda x: x["score"], reverse=True)
+        return results
+
+    # ------------------------------------------------------------------
+    # Retrieval context rendering (clean, no internals)
+    # ------------------------------------------------------------------
+
+    def _render_retrieval_context(self, deduped_results: list[dict[str, Any]]) -> str:
+        """Render deduplicated results as clean context for the LLM.
+
+        Includes confidence tiers derived from scores but never exposes
+        raw numerical scores.
+        """
+        if not deduped_results:
+            return "No matching songs found."
+
+        lines: list[str] = []
+        for i, item in enumerate(deduped_results[:8], start=1):
+            score = item.get("score", 0.0)
+            confidence = self._score_to_confidence(score)
+
+            header = f"Song {i} (confidence: {confidence}):"
+            lines.append(header)
+            lines.append(f"  Title: {item.get('title', 'Unknown')}")
+
+            if item.get("artist"):
+                lines.append(f"  Artist: {item['artist']}")
+            if item.get("album"):
+                lines.append(f"  Album: {item['album']}")
+            if item.get("genre"):
+                lines.append(f"  Genre: {item['genre']}")
+            if item.get("year"):
+                lines.append(f"  Year: {item['year']}")
+
+            # Merge chunk content as "Relevant content"
+            chunks = item.get("chunks", [])
+            if chunks:
+                merged_text = " ".join(
+                    c["text"] for c in chunks if c.get("text")
+                )
+                if merged_text:
+                    # Truncate to avoid token bloat
+                    if len(merged_text) > 500:
+                        merged_text = merged_text[:500] + "..."
+                    lines.append(f"  Relevant content: {merged_text}")
+
+            lines.append("")
+
+        return "\n".join(lines).strip()
+
+    def _score_to_confidence(self, score: float) -> str:
+        """Convert a numerical score into a human confidence tier."""
+        if score >= _HIGH_CONFIDENCE_THRESHOLD:
+            return "high"
+        elif score >= _MEDIUM_CONFIDENCE_THRESHOLD:
+            return "medium"
+        return "low"
+
+    # ------------------------------------------------------------------
+    # Tool output rendering (clean summary)
+    # ------------------------------------------------------------------
 
     def _render_tool_outputs(self, tool_results: list[ToolResult]) -> str:
+        """Render tool outputs as a concise summary without raw data dumps."""
         if not tool_results:
-            return "No tool outputs."
-        return "\n".join(
-            f"- {result.tool_name}: {'ok' if result.success else 'error'} {result.result or result.error or ''}"
-            for result in tool_results
-        )
+            return "No additional context."
 
-    def _build_citations(self, retrieval_context: Optional[RetrievalContext]) -> list[dict[str, Any]]:
+        summaries: list[str] = []
+        for result in tool_results:
+            if not result.success:
+                continue
+
+            tool_data = result.result or {}
+            # Extract meaningful summary from tool results
+            if result.tool_name == "SearchTool":
+                count = len(tool_data.get("results", []))
+                summaries.append(f"Search found {count} matching result(s).")
+            elif result.tool_name in ("SearchByArtistTool", "SearchByGenreTool", "SearchByYearTool"):
+                results = tool_data.get("results", [])
+                count = len(results)
+                summaries.append(f"{result.tool_name.replace('Tool', '')} found {count} result(s).")
+            elif result.tool_name == "SimilarSongsTool":
+                count = len(tool_data.get("citations", []))
+                summaries.append(f"Found {count} similar song(s).")
+            elif result.tool_name == "MediaDetailsTool":
+                media = tool_data.get("media", {})
+                if media:
+                    summaries.append(f"Retrieved details for: {media.get('title', 'Unknown')}.")
+            elif result.tool_name == "PipelineStatusTool":
+                summaries.append("Pipeline status retrieved.")
+            elif result.tool_name == "CollectionStatsTool":
+                summaries.append("Collection statistics retrieved.")
+            else:
+                summaries.append(f"{result.tool_name}: completed.")
+
+        return "\n".join(summaries) if summaries else "No additional context."
+
+    # ------------------------------------------------------------------
+    # Citations (normal vs debug)
+    # ------------------------------------------------------------------
+
+    def _build_citations(
+        self,
+        retrieval_context: Optional[RetrievalContext],
+        *,
+        debug: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Build citation list. In normal mode returns minimal info (title only).
+
+        In debug mode returns full internal metadata.
+        """
         if not retrieval_context:
             return []
-        citations: list[dict[str, Any]] = []
-        for item in retrieval_context.documents:
-            meta = item["metadata"]
-            citations.append(
-                {
-                    "media_id": meta.get("media_id"),
-                    "title": meta.get("title"),
-                    "chunk_id": meta.get("chunk_id"),
-                    "modality": meta.get("modality"),
-                    "score": meta.get("score"),
-                }
-            )
-        return citations
+
+        if debug:
+            # Full citations with all internal metadata
+            citations: list[dict[str, Any]] = []
+            seen_chunks: set[str] = set()
+            for item in retrieval_context.documents:
+                meta = item["metadata"]
+                chunk_id = meta.get("chunk_id", "")
+                if chunk_id in seen_chunks:
+                    continue
+                seen_chunks.add(chunk_id)
+                citations.append(
+                    {
+                        "media_id": meta.get("media_id"),
+                        "title": meta.get("title"),
+                        "chunk_id": chunk_id,
+                        "modality": meta.get("modality"),
+                        "score": meta.get("score"),
+                        "overall_score": meta.get("overall_score"),
+                    }
+                )
+            return citations
+
+        # Normal mode: no citations exposed to users
+        return []
 
     def _collect_media_ids(self, retrieval_context: Optional[RetrievalContext]) -> list[str]:
         if not retrieval_context:
             return []
         return list(dict.fromkeys(retrieval_context.media_ids))
+
+    # ------------------------------------------------------------------
+    # Serialization helpers
+    # ------------------------------------------------------------------
 
     def _tool_call_to_dict(self, tool_call: Any) -> dict[str, Any]:
         if isinstance(tool_call, dict):
@@ -595,10 +801,10 @@ class ConversationService:
                 "created_at": tool_call.get("created_at", ""),
                 "latency_ms": tool_call.get("latency_ms", None),
             }
-        
+
         created_at_val = getattr(tool_call, "created_at", None)
         created_at_str = created_at_val.isoformat() if hasattr(created_at_val, "isoformat") else str(created_at_val or "")
-        
+
         return {
             "invocation_id": getattr(tool_call, "invocation_id", ""),
             "tool_name": getattr(tool_call, "tool_name", ""),

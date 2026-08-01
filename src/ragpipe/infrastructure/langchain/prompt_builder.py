@@ -35,18 +35,16 @@ class PromptBuilder:
         history = self._format_history(memory)
         return template.format(conversation_history=history, user_message=user_message)
 
-    def build_search_prompt(self, search_config: dict[str, Any], retrieved_context: str) -> str:
+    def build_search_prompt(self, retrieved_context: str) -> str:
         template = self._load("search_prompt")
         return template.format(
-            search_config=self._stringify(search_config),
-            retrieved_context=retrieved_context or "No retrieval context available.",
+            retrieved_context=retrieved_context or "No matching songs found.",
         )
 
-    def build_tool_prompt(self, tool_descriptions: str, tool_outputs: str) -> str:
+    def build_tool_prompt(self, tool_outputs: str) -> str:
         template = self._load("tool_prompt")
         return template.format(
-            tool_descriptions=tool_descriptions or "No tools executed.",
-            tool_outputs=tool_outputs or "No tool outputs available.",
+            tool_outputs=tool_outputs or "No additional context.",
         )
 
     def build_messages(
@@ -61,8 +59,8 @@ class PromptBuilder:
     ) -> list[dict[str, str]]:
         system_prompt = self.build_system_prompt(conversation)
         conversation_prompt = self.build_conversation_prompt(memory, user_message)
-        search_prompt = self.build_search_prompt(search_config, retrieved_context)
-        tool_prompt = self.build_tool_prompt(tool_descriptions, tool_outputs)
+        search_prompt = self.build_search_prompt(retrieved_context)
+        tool_prompt = self.build_tool_prompt(tool_outputs)
         return [
             {
                 "role": "system",
@@ -77,17 +75,12 @@ class PromptBuilder:
         ]
 
     def _format_history(self, memory: ConversationMemory) -> str:
+        """Format conversation history cleanly without exposing internal metadata."""
+
         lines: list[str] = []
         for message in memory.messages:
-            lines.append(f"{message.role.value}: {message.content}")
-            if message.tool_calls:
-                lines.append(
-                    f"tool_calls: {self._stringify([tool.get('tool_name') if isinstance(tool, dict) else getattr(tool, 'tool_name', '') for tool in message.tool_calls])}"
-                )
-            if message.citations:
-                lines.append(f"citations: {self._stringify(message.citations)}")
-        if memory.retrieval_context:
-            lines.append(f"retrieval_context: {self._stringify(memory.retrieval_context)}")
+            role = message.role.value
+            lines.append(f"{role}: {message.content}")
         return "\n".join(lines) if lines else "No prior conversation history."
 
     def _stringify(self, value: Any) -> str:

@@ -1,8 +1,4 @@
-Use the retrieval pipeline to answer the user's question when it concerns songs, media, lyrics, transcripts, metadata, audio, or search.
-
-Search configuration:
-{search_config}
+Use the following retrieved songs and information to answer the user's question. Base your response only on what is provided below. If the context is empty or irrelevant, say you couldn't find a match and ask for more details.
 
 Retrieved context:
 {retrieved_context}
-

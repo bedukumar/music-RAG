@@ -1,6 +1,2 @@
-Available tools:
-{tool_descriptions}
-
-Tool outputs:
+Additional context from search tools:
 {tool_outputs}
-

@@ -13,18 +13,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
     setIsLoading(true);
     try {
       const msgs = await ChatAPI.getMessages(conversationId);
-      // Map API messages to our Message interface
       const mappedMsgs: Message[] = msgs.map((m: any) => ({
         id: m.id,
         role: m.role,
         content: m.content,
-        citations: m.citations,
       }));
       setMessages(mappedMsgs);
     } catch (err) {
@@ -54,8 +53,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
     setMessages(prev => [...prev, userMsg]);
     setIsStreaming(true);
 
-    // Placeholder for the assistant message
     const assistantMsgId = (Date.now() + 1).toString();
+    setStreamingMessageId(assistantMsgId);
     setMessages(prev => [
       ...prev,
       { id: assistantMsgId, role: 'assistant', content: '' }
@@ -71,22 +70,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
 
       for await (const event of stream) {
         if (event.event === 'delta') {
-          setMessages(prev => prev.map(m => 
+          setMessages(prev => prev.map(m =>
             m.id === assistantMsgId ? { ...m, content: m.content + (event.delta || '') } : m
           ));
         } else if (event.event === 'completion') {
-          setMessages(prev => prev.map(m => 
-            m.id === assistantMsgId ? { 
-              ...m, 
-              citations: event.data?.citations || [] 
-            } : m
-          ));
           if (event.data?.conversation_title) {
             finalTitle = event.data.conversation_title;
           }
         } else if (event.event === 'error') {
-          setMessages(prev => prev.map(m => 
-            m.id === assistantMsgId ? { ...m, content: m.content + '\\n\\n[Error: ' + event.error + ']' } : m
+          setMessages(prev => prev.map(m =>
+            m.id === assistantMsgId ? { ...m, content: m.content + '\n\n*An error occurred. Please try again.*' } : m
           ));
         }
       }
@@ -96,11 +89,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
       }
     } catch (err) {
       console.error('Chat error:', err);
-      setMessages(prev => prev.map(m => 
-        m.id === assistantMsgId ? { ...m, content: m.content + '\\n\\n[Connection Error]' } : m
+      setMessages(prev => prev.map(m =>
+        m.id === assistantMsgId ? { ...m, content: m.content + '\n\n*Connection error. Please try again.*' } : m
       ));
     } finally {
       setIsStreaming(false);
+      setStreamingMessageId(null);
     }
   };
 
@@ -112,18 +106,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onUpdateTitle }
             <div style={{ textAlign: 'center', color: 'var(--text-3)' }}>Loading messages...</div>
           ) : (
             messages.map(msg => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage
+                key={msg.id}
+                message={msg}
+                isStreaming={isStreaming && msg.id === streamingMessageId && msg.content.length > 0}
+              />
             ))
           )}
-          {isStreaming && (
-            <div className="message-row assistant">
-              <div className="message-bubble" style={{ padding: '8px 16px' }}>
-                <div className="loading-indicator">
-                  <div className="dot-flashing"></div>
+          {isStreaming && streamingMessageId && (() => {
+            const streamMsg = messages.find(m => m.id === streamingMessageId);
+            if (!streamMsg || streamMsg.content.length === 0) {
+              return (
+                <div className="message-row assistant">
+                  <div className="message-bubble" style={{ padding: '8px 16px' }}>
+                    <div className="loading-indicator">
+                      <div className="dot-flashing"></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              );
+            }
+            return null;
+          })()}
           <div ref={messagesEndRef} />
         </div>
       </div>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse as SSEStreamingResponse
 
 from ragpipe.domain.models.modality import Modality
@@ -131,7 +131,9 @@ async def delete_conversation(
 async def chat(
     request: ChatRequest,
     conversation_service=Depends(get_conversation_service),
+    x_debug_response: str | None = Header(default=None),
 ):
+    debug = request.debug or (x_debug_response is not None and x_debug_response.lower() in ("true", "1", "yes"))
     try:
         response = await conversation_service.chat(
             message=request.message,
@@ -148,16 +150,19 @@ async def chat(
             search_mode=request.search_mode,
             page=request.page,
             page_size=request.page_size,
+            debug=debug,
         )
+        citations = [CitationResponse(**c) for c in response.get("citations", [])] if response.get("citations") else []
+        tool_calls = [ToolCallResponse(**t) for t in response.get("tool_calls", [])] if response.get("tool_calls") else []
         return ChatResponse(
             conversation_id=response["conversation_id"],
             message_id=response["message_id"],
             assistant_message=response["assistant_message"],
-            citations=[CitationResponse(**citation) for citation in response["citations"]],
-            retrieved_media_ids=response["retrieved_media_ids"],
-            tool_calls=[ToolCallResponse(**tool) for tool in response["tool_calls"]],
-            latency_ms=response["latency_ms"],
-            token_usage=response["token_usage"],
+            citations=citations,
+            retrieved_media_ids=response.get("retrieved_media_ids", []),
+            tool_calls=tool_calls,
+            latency_ms=response.get("latency_ms", {}),
+            token_usage=response.get("token_usage", {}),
             conversation_title=response.get("conversation_title"),
         )
     except ValueError as exc:
@@ -169,7 +174,10 @@ async def chat(
 async def chat_stream(
     request: ChatRequest,
     conversation_service=Depends(get_conversation_service),
+    x_debug_response: str | None = Header(default=None),
 ):
+    debug = request.debug or (x_debug_response is not None and x_debug_response.lower() in ("true", "1", "yes"))
+
     async def event_stream():
         try:
             async for event in conversation_service.stream_chat(
@@ -187,6 +195,7 @@ async def chat_stream(
                 search_mode=request.search_mode,
                 page=request.page,
                 page_size=request.page_size,
+                debug=debug,
             ):
                 payload = StreamingResponse(
                     event=event["event"],
