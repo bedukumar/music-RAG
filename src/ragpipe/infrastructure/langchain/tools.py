@@ -206,7 +206,7 @@ class SearchByArtistTool(BaseConversationTool):
         candidate = context.filters.get("artist")
         if candidate:
             return str(candidate)
-        match = re.search(r"\bby\s+(.+)$", context.user_message, re.IGNORECASE)
+        match = re.search(r"\b(?:by|artist|singer|band)\s+(?:is\s+)?(.+)$", context.user_message, re.IGNORECASE)
         if match:
             return match.group(1).strip(" ?!.,")
         return context.user_message.strip()

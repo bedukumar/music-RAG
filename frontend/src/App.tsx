@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
-import { Home, ListMusic, Activity, Database, Search, Settings as SettingsIcon } from 'lucide-react';
+import { Home, ListMusic, Activity, Database, Search, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
+import Chat from './pages/Chat';
 import MediaCatalog from './pages/MediaCatalog';
 import MediaDetails from './pages/MediaDetails';
 import JobsMonitor from './pages/JobsMonitor';
@@ -44,6 +45,13 @@ function App() {
               Search
             </NavLink>
             <NavLink
+              to="/chat"
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            >
+              <MessageSquare size={14} strokeWidth={2} />
+              Chat
+            </NavLink>
+            <NavLink
               to="/media"
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
@@ -82,6 +90,7 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/"                   element={<Dashboard />} />
+            <Route path="/chat"               element={<Chat />} />
             <Route path="/search"             element={<SearchPage />} />
             <Route path="/search/history"     element={<SearchHistory />} />
             <Route path="/search/analytics"   element={<SearchAnalytics />} />

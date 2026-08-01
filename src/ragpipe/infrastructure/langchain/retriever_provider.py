@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from ragpipe.application.retrieval.planner import RetrievalPlanner
+from ragpipe.application.retrieval.orchestrator import RetrievalOrchestrator
 from ragpipe.domain.models.modality import Modality
 from ragpipe.domain.retrieval.models import RetrievalResult, SearchFilters, SearchQuery
 
@@ -31,7 +31,8 @@ class PlannerLangChainRetriever(BaseRetriever):  # type: ignore[misc]
     """LangChain-compatible wrapper around RetrievalPlanner."""
 
     def __init__(self, provider: "RetrieverProvider") -> None:
-        self.provider = provider
+        super().__init__()
+        object.__setattr__(self, "provider", provider)
 
     async def _aget_relevant_documents(self, query: str):  # pragma: no cover - thin adapter
         context = await self.provider.retrieve(query)
@@ -54,10 +55,10 @@ class RetrieverProvider:
 
     def __init__(
         self,
-        planner: RetrievalPlanner,
+        orchestrator: RetrievalOrchestrator,
         default_modalities: Optional[list[Modality]] = None,
     ) -> None:
-        self.planner = planner
+        self.orchestrator = orchestrator
         self.default_modalities = default_modalities or [
             Modality.AUDIO,
             Modality.TRANSCRIPT,
@@ -98,7 +99,7 @@ class RetrieverProvider:
             rerank=rerank,
             fusion_strategy=fusion_strategy,
         )
-        session = await self.planner.plan_and_execute(search_query)
+        session = await self.orchestrator.execute_search(search_query)
         documents: list[dict[str, Any]] = []
         media_ids: list[str] = []
         for result in session.results:

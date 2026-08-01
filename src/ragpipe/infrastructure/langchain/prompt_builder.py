@@ -82,7 +82,7 @@ class PromptBuilder:
             lines.append(f"{message.role.value}: {message.content}")
             if message.tool_calls:
                 lines.append(
-                    f"tool_calls: {self._stringify([tool.tool_name for tool in message.tool_calls])}"
+                    f"tool_calls: {self._stringify([tool.get('tool_name') if isinstance(tool, dict) else getattr(tool, 'tool_name', '') for tool in message.tool_calls])}"
                 )
             if message.citations:
                 lines.append(f"citations: {self._stringify(message.citations)}")

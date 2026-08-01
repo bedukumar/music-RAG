@@ -164,7 +164,7 @@ class ConversationService:
             )
 
         retrieved_context_text = self._render_retrieval_context(retrieval_context)
-        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_results", []))
+        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_result_objects", []))
 
         search_config = {
             "modalities": [mod.value for mod in (modalities or [Modality.AUDIO, Modality.TRANSCRIPT, Modality.METADATA])],
@@ -322,7 +322,7 @@ class ConversationService:
             )
 
         retrieved_context_text = self._render_retrieval_context(retrieval_context)
-        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_results", []))
+        tool_outputs_text = self._render_tool_outputs(tool_summary.get("tool_result_objects", []))
         search_config = {
             "modalities": [mod.value for mod in (modalities or [Modality.AUDIO, Modality.TRANSCRIPT, Modality.METADATA])],
             "filters": filters or {},
@@ -586,13 +586,25 @@ class ConversationService:
             return []
         return list(dict.fromkeys(retrieval_context.media_ids))
 
-    def _tool_call_to_dict(self, tool_call: ToolInvocation) -> dict[str, Any]:
+    def _tool_call_to_dict(self, tool_call: Any) -> dict[str, Any]:
+        if isinstance(tool_call, dict):
+            return {
+                "invocation_id": tool_call.get("invocation_id", ""),
+                "tool_name": tool_call.get("tool_name", ""),
+                "arguments": tool_call.get("arguments", {}),
+                "created_at": tool_call.get("created_at", ""),
+                "latency_ms": tool_call.get("latency_ms", None),
+            }
+        
+        created_at_val = getattr(tool_call, "created_at", None)
+        created_at_str = created_at_val.isoformat() if hasattr(created_at_val, "isoformat") else str(created_at_val or "")
+        
         return {
-            "invocation_id": tool_call.invocation_id,
-            "tool_name": tool_call.tool_name,
-            "arguments": tool_call.arguments,
-            "created_at": tool_call.created_at.isoformat(),
-            "latency_ms": tool_call.latency_ms,
+            "invocation_id": getattr(tool_call, "invocation_id", ""),
+            "tool_name": getattr(tool_call, "tool_name", ""),
+            "arguments": getattr(tool_call, "arguments", {}),
+            "created_at": created_at_str,
+            "latency_ms": getattr(tool_call, "latency_ms", None),
         }
 
     def _normalize_usage(self, usage: dict[str, Any]) -> dict[str, int]:

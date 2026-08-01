@@ -52,4 +52,54 @@ export const PipelineAPI = {
   getStats: () => api.get('/pipeline/stats').then(res => res.data),
 };
 
+export const ChatAPI = {
+  createConversation: (data: { title: string; system_prompt_version?: string; memory_window?: number }) => api.post('/chat/conversation', data).then(res => res.data),
+  getConversation: (id: string) => api.get(`/chat/conversation/${id}`).then(res => res.data),
+  getMessages: (id: string) => api.get(`/chat/conversation/${id}/messages`).then(res => res.data),
+  deleteConversation: (id: string) => api.delete(`/chat/conversation/${id}`).then(res => res.data),
+  chat: (data: any) => api.post('/chat', data).then(res => res.data),
+  streamChat: async function* (data: any) {
+    const response = await fetch('/api/v1/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder('utf-8');
+    
+    if (!reader) return;
+    
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+      
+      for (const chunk of lines) {
+        const chunkLines = chunk.split('\n');
+        for (const line of chunkLines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6);
+            try {
+              yield JSON.parse(dataStr);
+            } catch (e) {
+              console.error('Error parsing SSE data', e, dataStr);
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 export default api;

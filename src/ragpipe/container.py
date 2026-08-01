@@ -273,8 +273,9 @@ class Container:
             self.conversation_repository,
             default_window=settings.conversation.memory_window,
         )
-        self.retriever_provider = RetrieverProvider(retrieval_planner)
+        self.retriever_provider = RetrieverProvider(retrieval_orchestrator)
         self.llm_provider = GeminiChatProvider(
+            api_key=settings.gemini_api_key or settings.google_api_key,
             model=settings.conversation.model_name,
             max_output_tokens=settings.conversation.max_output_tokens,
         )

@@ -15,7 +15,7 @@ class GeminiChatProvider(LLMProvider):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3.6-flash",
         temperature: float = 0.2,
         max_output_tokens: int = 1024,
     ) -> None:
@@ -56,6 +56,14 @@ class GeminiChatProvider(LLMProvider):
         client = self._get_client()
         response = await client.ainvoke(messages)
         content = getattr(response, "content", "")
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict) and "text" in part:
+                    parts.append(part["text"])
+            content = "".join(parts)
         metadata = getattr(response, "response_metadata", {}) or {}
         usage = getattr(response, "usage_metadata", {}) or {}
         return {
@@ -71,8 +79,17 @@ class GeminiChatProvider(LLMProvider):
     ) -> AsyncIterator[dict[str, Any]]:
         client = self._get_client()
         async for chunk in client.astream(messages):
+            content = getattr(chunk, "content", "")
+            if isinstance(content, list):
+                parts = []
+                for part in content:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict) and "text" in part:
+                        parts.append(part["text"])
+                content = "".join(parts)
             yield {
-                "delta": getattr(chunk, "content", ""),
+                "delta": content,
                 "raw": chunk,
                 "model": self._model,
             }

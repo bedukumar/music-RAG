@@ -200,11 +200,17 @@ class ToolExecutor:
     def _select_tools(self, context: ToolExecutionContext) -> list[str]:
         message = context.user_message.lower()
         selected: list[str] = []
+        import re
 
-        if any(keyword in message for keyword in ["media", "song", "songs", "lyrics", "transcript", "audio", "metadata", "similar"]):
+        search_keywords = [
+            "media", "song", "songs", "lyrics", "transcript", "audio", 
+            "metadata", "similar", "music", "track", "tracks", "beat", 
+            "sound", "tune", "anthem"
+        ]
+        if any(keyword in message for keyword in search_keywords):
             selected.append("SearchTool")
 
-        if "artist" in message or "by " in message or "singer" in message:
+        if re.search(r'\b(artist|singer|band)\b', message) or re.search(r'\b(?:song|track|music|album)s? by\b', message):
             selected.append("SearchByArtistTool")
 
         if "genre" in message:

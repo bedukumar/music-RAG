@@ -56,21 +56,21 @@ def _serialize_message(message) -> ConversationMessageResponse:
         content=message.content,
         tool_calls=[
             ToolCallResponse(
-                invocation_id=tool.invocation_id,
-                tool_name=tool.tool_name,
-                arguments=tool.arguments,
-                latency_ms=tool.latency_ms,
+                invocation_id=tool.get("invocation_id", "") if isinstance(tool, dict) else getattr(tool, "invocation_id", ""),
+                tool_name=tool.get("tool_name", "") if isinstance(tool, dict) else getattr(tool, "tool_name", ""),
+                arguments=tool.get("arguments", {}) if isinstance(tool, dict) else getattr(tool, "arguments", {}),
+                latency_ms=tool.get("latency_ms") if isinstance(tool, dict) else getattr(tool, "latency_ms", None),
             )
             for tool in message.tool_calls
         ],
         tool_results=[
             ToolResultResponse(
-                invocation_id=result.invocation_id,
-                tool_name=result.tool_name,
-                success=result.success,
-                result=result.result,
-                error=result.error,
-                latency_ms=result.latency_ms,
+                invocation_id=result.get("invocation_id", "") if isinstance(result, dict) else getattr(result, "invocation_id", ""),
+                tool_name=result.get("tool_name", "") if isinstance(result, dict) else getattr(result, "tool_name", ""),
+                success=result.get("success", False) if isinstance(result, dict) else getattr(result, "success", False),
+                result=result.get("result", {}) if isinstance(result, dict) else getattr(result, "result", {}),
+                error=result.get("error") if isinstance(result, dict) else getattr(result, "error", None),
+                latency_ms=result.get("latency_ms") if isinstance(result, dict) else getattr(result, "latency_ms", None),
             )
             for result in message.tool_results
         ],
@@ -194,6 +194,7 @@ async def chat_stream(
                     message_id=event.get("message_id"),
                     delta=event.get("data", {}).get("delta"),
                     data=event.get("data") if isinstance(event.get("data"), dict) else None,
+                    error=event.get("error"),
                     done=event["event"] == "completion",
                 )
                 yield f"event: {payload.event}\ndata: {payload.model_dump_json()}\n\n"

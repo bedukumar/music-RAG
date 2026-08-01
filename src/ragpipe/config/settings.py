@@ -149,7 +149,7 @@ class ConversationSettings(BaseSettings):
 
     memory_window: int = Field(default=12, ge=1, le=100)
     system_prompt_version: str = Field(default="v1")
-    model_name: str = Field(default="gemini-2.5-flash")
+    model_name: str = Field(default="gemini-3.6-flash")
     max_output_tokens: int = Field(default=1024, ge=1, le=8192)
     default_top_k: int = Field(default=8, ge=1, le=100)
     default_page_size: int = Field(default=10, ge=1, le=100)
@@ -177,6 +177,9 @@ class Settings(BaseSettings):
 
     # Use mock embedders (for dev/testing without GPU)
     use_mock_embedders: bool = Field(default=True)
+    
+    gemini_api_key: Optional[str] = Field(default=None, validation_alias="GEMINI_API_KEY")
+    google_api_key: Optional[str] = Field(default=None, validation_alias="GOOGLE_API_KEY")
 
     # Sub-settings (initialized lazily)
     _database: Optional[DatabaseSettings] = None
