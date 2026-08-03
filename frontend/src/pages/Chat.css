@@ -24,7 +24,15 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--shadow-1);
-  transition: var(--t-normal);
+  transition: width var(--t-normal), opacity var(--t-normal), border var(--t-normal), padding var(--t-normal);
+}
+
+.chat-layout.sidebar-collapsed .chat-sidebar {
+  width: 0;
+  border-width: 0;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
 }
 
 .chat-sidebar-header {
@@ -133,8 +141,33 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow: hidden;
   position: relative;
   box-shadow: var(--shadow-2);
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-2);
+  color: var(--text-2);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  box-shadow: var(--shadow-1);
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
 }
 
 .chat-empty-state {

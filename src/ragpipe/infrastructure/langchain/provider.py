@@ -15,7 +15,7 @@ class GeminiChatProvider(LLMProvider):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-3.6-flash",
+        model: str = "gemini-3.5-flash",
         temperature: float = 0.2,
         max_output_tokens: int = 1024,
     ) -> None:

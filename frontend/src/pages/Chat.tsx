@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatWindow from '../components/chat/ChatWindow';
 import { ChatAPI } from '../api/client';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import './Chat.css';
 
 interface ConversationInfo {
@@ -13,6 +14,7 @@ interface ConversationInfo {
 const Chat: React.FC = () => {
   const [conversations, setConversations] = useState<ConversationInfo[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Load conversations from local storage
   useEffect(() => {
@@ -70,7 +72,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="chat-layout">
+    <div className={`chat-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
       <ChatSidebar
         conversations={conversations}
         activeId={activeConversationId}
@@ -79,6 +81,13 @@ const Chat: React.FC = () => {
         onDelete={handleDeleteChat}
       />
       <div className="chat-main">
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+        </button>
         {activeConversationId ? (
           <ChatWindow
             conversationId={activeConversationId}
