@@ -29,13 +29,14 @@
 
 .chat-layout.sidebar-collapsed .chat-sidebar {
   width: 72px;
+  overflow: visible;
 }
 
 .chat-sidebar-header {
   padding: 16px;
   border-bottom: 1px solid var(--border-1);
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
   align-items: center;
   transition: padding var(--t-normal);
 }
@@ -54,6 +55,9 @@
 .chat-layout.sidebar-collapsed .chat-list-item {
   justify-content: center;
   padding: 12px 0;
+}
+.chat-layout.sidebar-collapsed .chat-list {
+  overflow: visible;
 }
 
 .chat-list {
@@ -638,4 +642,89 @@
 .action-button:hover {
   color: var(--accent);
   background: var(--bg-2);
+}
+
+/* ============================================================
+   COLLAPSED SIDEBAR HOVER POPUP
+   ============================================================ */
+.collapsed-chat-group {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.collapsed-chat-icon-wrapper {
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 10px;
+  border-radius: var(--r-2);
+  transition: all var(--t-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapsed-chat-icon-wrapper:hover {
+  background-color: var(--bg-2);
+  color: var(--text-1);
+}
+
+.collapsed-chat-popup {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 12px;
+  background-color: var(--bg-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-2);
+  width: 240px;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-10px);
+  transition: opacity var(--t-fast) 1s, visibility var(--t-fast) 1s, transform var(--t-fast) 1s;
+  padding: 8px 0;
+}
+
+.collapsed-chat-group:hover .collapsed-chat-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  transition: opacity var(--t-fast) 0s, visibility var(--t-fast) 0s, transform var(--t-fast) 0s;
+}
+
+.collapsed-popup-header {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-1);
+  margin-bottom: 4px;
+}
+
+.collapsed-popup-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid transparent;
+}
+
+.collapsed-popup-item:hover {
+  background-color: var(--bg-2);
+  color: var(--text-1);
+}
+
+.collapsed-popup-item.active {
+  background-color: var(--bg-3);
+  color: var(--text-1);
+  border-left-color: var(--accent);
 }

@@ -37,26 +37,46 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </button>
       </div>
       <div className="chat-list">
-        {conversations.map(conv => (
-          <div
-            key={conv.id}
-            className={`chat-list-item ${activeId === conv.id ? 'active' : ''}`}
-            onClick={() => onSelect(conv.id)}
-          >
-            <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
-            <span className="chat-list-item-title">{conv.title || 'New Conversation'}</span>
-            <button
-              className="delete-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(conv.id);
-              }}
-              title="Delete conversation"
-            >
-              <Trash2 size={14} />
-            </button>
+        {!isSidebarOpen ? (
+          <div className="collapsed-chat-group">
+            <div className="collapsed-chat-icon-wrapper">
+              <MessageSquare size={20} style={{ opacity: 0.7 }} />
+            </div>
+            <div className="collapsed-chat-popup">
+              <div className="collapsed-popup-header">Recent Chats</div>
+              {conversations.slice(0, 5).map(conv => (
+                <div
+                  key={conv.id}
+                  className={`collapsed-popup-item ${activeId === conv.id ? 'active' : ''}`}
+                  onClick={() => onSelect(conv.id)}
+                >
+                  <span className="collapsed-popup-title">{conv.title || 'New Conversation'}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        ) : (
+          conversations.map(conv => (
+            <div
+              key={conv.id}
+              className={`chat-list-item ${activeId === conv.id ? 'active' : ''}`}
+              onClick={() => onSelect(conv.id)}
+            >
+              <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <span className="chat-list-item-title">{conv.title || 'New Conversation'}</span>
+              <button
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(conv.id);
+                }}
+                title="Delete conversation"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
