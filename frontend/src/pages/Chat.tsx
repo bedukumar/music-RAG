@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatWindow from '../components/chat/ChatWindow';
 import { ChatAPI } from '../api/client';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import './Chat.css';
 
 interface ConversationInfo {
@@ -79,15 +78,10 @@ const Chat: React.FC = () => {
         onSelect={setActiveConversationId}
         onNewChat={handleNewChat}
         onDelete={handleDeleteChat}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       />
       <div className="chat-main">
-        <button 
-          className="sidebar-toggle-btn" 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-        </button>
         {activeConversationId ? (
           <ChatWindow
             conversationId={activeConversationId}

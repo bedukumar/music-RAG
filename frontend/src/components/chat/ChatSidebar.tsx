@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Trash2 } from 'lucide-react';
+import { MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, SquarePen } from 'lucide-react';
 
 interface ConversationInfo {
   id: string;
@@ -13,6 +13,8 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onDelete: (id: string) => void;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -20,14 +22,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   activeId,
   onSelect,
   onNewChat,
-  onDelete
+  onDelete,
+  isSidebarOpen,
+  onToggleSidebar
 }) => {
   return (
     <div className="chat-sidebar">
       <div className="chat-sidebar-header">
-        <button className="new-chat-btn" onClick={onNewChat}>
-          <Plus size={16} />
-          New Chat
+        <button className="icon-action-btn" onClick={onToggleSidebar} title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}>
+          {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+        </button>
+        <button className="icon-action-btn" onClick={onNewChat} title="New Chat">
+          <SquarePen size={20} />
         </button>
       </div>
       <div className="chat-list">
