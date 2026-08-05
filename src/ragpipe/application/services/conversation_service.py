@@ -135,7 +135,8 @@ class ConversationService:
         start_time = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
-            title=title or await self._derive_title(message),
+            title=title,
+            message=message,
         )
         user_message = ConversationMessage.create(
             conversation_id=conversation.id,
@@ -311,7 +312,8 @@ class ConversationService:
         start_time = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
-            title=title or await self._derive_title(message),
+            title=title,
+            message=message,
         )
         user_message = ConversationMessage.create(
             conversation_id=conversation.id,
@@ -545,16 +547,23 @@ class ConversationService:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _get_or_create_conversation(self, conversation_id: Optional[str], title: str) -> Conversation:
+    async def _get_or_create_conversation(self, conversation_id: Optional[str], title: Optional[str], message: str) -> Conversation:
         if conversation_id:
             conversation = await self.conversation_repo.get_conversation(conversation_id)
             if conversation:
-                if conversation.title in ("New Conversation", "New conversation") and title and title != conversation.title:
+                if conversation.title in ("New Conversation", "New conversation"):
+                    new_title = title or await self._derive_title(message)
+                    if new_title and new_title != conversation.title:
+                        conversation = replace(conversation, title=new_title)
+                        await self.conversation_repo.update_conversation(conversation)
+                elif title and title != conversation.title:
                     conversation = replace(conversation, title=title)
                     await self.conversation_repo.update_conversation(conversation)
                 return conversation
             raise ValueError(f"Conversation not found: {conversation_id}")
-        return await self.create_conversation(title)
+        
+        new_title = title or await self._derive_title(message)
+        return await self.create_conversation(new_title)
 
     async def _run_retrieval(
         self,

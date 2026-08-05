@@ -1,5 +1,6 @@
 """Retrieval Planner for executing multi-modal searches."""
 
+import asyncio
 import time
 from typing import Dict, List, Optional
 
@@ -52,44 +53,45 @@ class RetrievalPlanner(BaseRetrievalPipeline):
         await self._emit_stage_completed(RetrievalStage.MODALITY_SELECTION, 0.0)
 
         # 2. Parallel Retrieval Execution
-        modality_results: Dict[Modality, List[RetrievalResult]] = {}
-
-        for modality in query.active_modalities:
+        async def fetch_modality(modality: Modality) -> tuple[Modality, List[RetrievalResult]]:
             if modality == Modality.METADATA and not query.text:
                 results = await self.metadata_retriever.search(query, query.top_k)
-                modality_results[modality] = results
-            else:
-                embedder = self.embedders.get(modality)
-                retriever = self.vector_retrievers.get(modality)
-                if embedder and retriever:
-                    embedding = await embedder.embed_query(query.text)
-                    
-                    # If this is the specialized AudioRetriever, pass the extended configuration
-                    if hasattr(retriever, "score_threshold") or modality == Modality.AUDIO:
-                        # For dynamic dispatch safety, we'll try passing kwargs directly
-                        # or specifically if it's the audio retriever port
-                        from ragpipe.domain.retrieval.ports import AudioRetriever
-                        if isinstance(retriever, AudioRetriever):
-                            results = await retriever.search(
-                                query_vector=embedding.vector,
-                                top_k=query.top_k,
-                                score_threshold=query.score_threshold,
-                                include_similarity_score=query.include_similarity_score,
-                                filters=query.filters.exact_matches,
-                                query_text=query.text
-                            )
-                        else:
-                            results = await retriever.search(
-                                query_vector=embedding.vector, 
-                                top_k=query.top_k, 
-                                filters=query.filters.exact_matches,
-                                query_text=query.text
-                            )
+                return modality, results
+            
+            embedder = self.embedders.get(modality)
+            retriever = self.vector_retrievers.get(modality)
+            if embedder and retriever:
+                embedding = await embedder.embed_query(query.text)
+                if hasattr(retriever, "score_threshold") or modality == Modality.AUDIO:
+                    from ragpipe.domain.retrieval.ports import AudioRetriever
+                    if isinstance(retriever, AudioRetriever):
+                        results = await retriever.search(
+                            query_vector=embedding.vector,
+                            top_k=query.top_k,
+                            score_threshold=query.score_threshold,
+                            include_similarity_score=query.include_similarity_score,
+                            filters=query.filters.exact_matches,
+                            query_text=query.text
+                        )
                     else:
                         results = await retriever.search(
-                            embedding.vector, query.top_k, query.filters.exact_matches, query.text
+                            query_vector=embedding.vector, 
+                            top_k=query.top_k, 
+                            filters=query.filters.exact_matches,
+                            query_text=query.text
                         )
-                    modality_results[modality] = results
+                else:
+                    results = await retriever.search(
+                        embedding.vector, query.top_k, query.filters.exact_matches, query.text
+                    )
+                return modality, results
+            return modality, []
+
+        tasks = [fetch_modality(mod) for mod in query.active_modalities]
+        gathered_results = await asyncio.gather(*tasks)
+        modality_results: Dict[Modality, List[RetrievalResult]] = {
+            mod: results for mod, results in gathered_results if results
+        }
 
         await self._emit_stage_completed(
             RetrievalStage.VECTOR_RETRIEVAL, (time.time() - start_time) * 1000
