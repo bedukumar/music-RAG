@@ -85,6 +85,11 @@ class CLAPEmbedder(AudioEmbeddingProvider):
             self._model = await loop.run_in_executor(None, load_sync)
             logger.info("LAION CLAP model loaded successfully.")
 
+    async def warmup(self) -> None:
+        """Pre-load model weights. Call at application startup to eliminate
+        first-request latency. Safe to call multiple times (idempotent)."""
+        await self._ensure_loaded()
+
     async def embed_audio(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
         """Embed a single audio array.
 

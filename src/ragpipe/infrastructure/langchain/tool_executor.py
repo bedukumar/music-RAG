@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Optional
@@ -97,10 +98,10 @@ class ToolExecutor:
         structured_results: list[dict[str, Any]] = []
         retrieval_context: Optional[RetrievalContext] = None
 
-        for name in tool_names:
+        async def _run_single_tool(name: str):
             tool = self._tools.get(name)
             if tool is None:
-                continue
+                return None
             invocation = ToolInvocation(
                 tool_name=name,
                 arguments={
@@ -122,13 +123,22 @@ class ToolExecutor:
                 created_at=result.created_at,
                 latency_ms=result.latency_ms,
             )
-            invocation = ToolInvocation(
+            final_invocation = ToolInvocation(
                 tool_name=invocation.tool_name,
                 arguments=invocation.arguments,
                 invocation_id=invocation.invocation_id,
                 created_at=invocation.created_at,
                 latency_ms=result.latency_ms,
             )
+            return final_invocation, result
+
+        tasks = [_run_single_tool(name) for name in tool_names]
+        completed_tasks = await asyncio.gather(*tasks)
+
+        for completed in completed_tasks:
+            if not completed:
+                continue
+            invocation, result = completed
             invocations.append(invocation)
             results.append(result)
             structured_results.append(

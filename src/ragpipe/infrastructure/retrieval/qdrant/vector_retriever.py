@@ -1,9 +1,13 @@
 """Qdrant vector retriever implementation."""
 
+import logging
+
 from ragpipe.domain.models.modality import Modality
 from ragpipe.domain.ports.vector_repository import VectorRepository
 from ragpipe.domain.retrieval.models import RetrievalResult
 from ragpipe.domain.retrieval.ports import VectorRetriever
+
+logger = logging.getLogger(__name__)
 
 
 class QdrantVectorRetriever(VectorRetriever):
@@ -77,9 +81,9 @@ class QdrantVectorRetriever(VectorRetriever):
                     )
             except Exception as e:
                 # Fallback if scroll fails (e.g. index not ready)
-                print(f"Keyword search failed: {e}")
+                logger.warning("keyword_search_failed for collection %s: %s", self.collection_name, str(e))
 
-        print(f"DEBUG: semantic_results={len(semantic_results)}, keyword_results={len(keyword_results)}")
+        logger.debug("hybrid_search_results: semantic_count=%d, keyword_count=%d", len(semantic_results), len(keyword_results))
         # 3. Native RRF Fusion
         score_map = {}
         result_map = {}

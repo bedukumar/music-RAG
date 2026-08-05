@@ -133,6 +133,9 @@ class ConversationService:
         """Execute a complete conversational turn."""
 
         start_time = time.perf_counter()
+
+        # Stage: conversation load
+        t0 = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
             title=title,
@@ -145,13 +148,19 @@ class ConversationService:
             system_prompt_version=conversation.system_prompt_version,
         )
         await self.conversation_repo.add_message(user_message)
+        conv_load_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: memory load
+        t0 = time.perf_counter()
         memory = await self.memory_provider.load_memory(
             conversation.id,
             window_size=conversation.memory_window,
             system_prompt_version=conversation.system_prompt_version,
         )
+        memory_load_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: tool execution (includes embedded retrieval)
+        t0 = time.perf_counter()
         tool_context = ToolExecutionContext(
             conversation_id=conversation.id,
             user_message=message,
@@ -169,7 +178,10 @@ class ConversationService:
             page_size=page_size,
         )
         tool_summary = await self.tool_executor.execute(tool_context)
+        tool_exec_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: fallback retrieval (if tools didn't produce context)
+        t0 = time.perf_counter()
         retrieval_context = tool_summary.get("retrieval_context")
         if retrieval_context is None and self._should_use_retrieval(message):
             retrieval_context = await self._run_retrieval(
@@ -183,14 +195,15 @@ class ConversationService:
                 rerank=rerank,
                 fusion_strategy=fusion_strategy,
             )
+        retrieval_ms = (time.perf_counter() - t0) * 1000
 
-        # Deduplicate and render clean context for the LLM
+        # Stage: prompt construction
+        t0 = time.perf_counter()
         deduped = self._deduplicate_context(retrieval_context)
         retrieved_context_text = self._render_retrieval_context(deduped)
         tool_outputs_text = self._render_tool_outputs(
             tool_summary.get("tool_result_objects", [])
         )
-
         search_config = {
             "modalities": [mod.value for mod in (modalities or [Modality.AUDIO, Modality.TRANSCRIPT, Modality.METADATA])],
             "filters": filters or {},
@@ -213,7 +226,9 @@ class ConversationService:
             tool_descriptions=self.tool_executor.describe_tools(),
             tool_outputs=tool_outputs_text,
         )
+        prompt_build_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: LLM call
         llm_start = time.perf_counter()
         llm_response = await self.llm_provider.acomplete(prompt_messages)
         llm_latency_ms = (time.perf_counter() - llm_start) * 1000
@@ -224,7 +239,6 @@ class ConversationService:
         citations = self._build_citations(retrieval_context, debug=debug)
         tool_calls = tool_summary.get("tool_invocations", [])
         retrieved_media_ids = self._collect_media_ids(retrieval_context)
-
         retrieval_documents = retrieval_context.documents if retrieval_context else []
 
         assistant_message = ConversationMessage.create(
@@ -252,10 +266,33 @@ class ConversationService:
         )
 
         total_latency_ms = (time.perf_counter() - start_time) * 1000
+        retrieval_latency_ms = float(retrieval_context.latency_ms) if retrieval_context else 0.0
+
+        # Structured latency summary — logged after every request
+        stage_breakdown = {
+            "conversation_load_ms": round(conv_load_ms, 2),
+            "memory_load_ms": round(memory_load_ms, 2),
+            "tool_execution_ms": round(tool_exec_ms, 2),
+            "retrieval_ms": round(retrieval_ms, 2),
+            "prompt_build_ms": round(prompt_build_ms, 2),
+            "llm_ms": round(llm_latency_ms, 2),
+            "total_ms": round(total_latency_ms, 2),
+        }
+        slowest = max(
+            {k: v for k, v in stage_breakdown.items() if k != "total_ms"},
+            key=stage_breakdown.get,
+        )
+        logger.info(
+            "chat_latency_summary",
+            conversation_id=conversation.id,
+            slowest_stage=slowest,
+            **stage_breakdown,
+        )
+
         self._record_metrics(
             total_latency_ms=total_latency_ms,
             llm_latency_ms=llm_latency_ms,
-            retrieval_latency_ms=float(retrieval_context.latency_ms) if retrieval_context else 0.0,
+            retrieval_latency_ms=retrieval_latency_ms,
             tool_latency_ms=tool_summary.get("latency_ms", 0.0),
             token_usage=usage,
             conversation_id=conversation.id,
@@ -276,8 +313,9 @@ class ConversationService:
             response["latency_ms"] = {
                 "total": total_latency_ms,
                 "llm": llm_latency_ms,
-                "retrieval": float(retrieval_context.latency_ms) if retrieval_context else 0.0,
+                "retrieval": retrieval_latency_ms,
                 "tools": tool_summary.get("latency_ms", 0.0),
+                "stages": stage_breakdown,
             }
             response["token_usage"] = self._normalize_usage(usage)
         else:
@@ -310,6 +348,9 @@ class ConversationService:
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream a chat turn as SSE-friendly event payloads."""
         start_time = time.perf_counter()
+
+        # Stage: conversation load
+        t0 = time.perf_counter()
         conversation = await self._get_or_create_conversation(
             conversation_id=conversation_id,
             title=title,
@@ -322,13 +363,19 @@ class ConversationService:
             system_prompt_version=conversation.system_prompt_version,
         )
         await self.conversation_repo.add_message(user_message)
+        conv_load_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: memory load
+        t0 = time.perf_counter()
         memory = await self.memory_provider.load_memory(
             conversation.id,
             window_size=conversation.memory_window,
             system_prompt_version=conversation.system_prompt_version,
         )
+        memory_load_ms = (time.perf_counter() - t0) * 1000
 
+        # Stage: tool execution
+        t0 = time.perf_counter()
         tool_context = ToolExecutionContext(
             conversation_id=conversation.id,
             user_message=message,
@@ -346,6 +393,10 @@ class ConversationService:
             page_size=page_size,
         )
         tool_summary = await self.tool_executor.execute(tool_context)
+        tool_exec_ms = (time.perf_counter() - t0) * 1000
+
+        # Stage: fallback retrieval
+        t0 = time.perf_counter()
         retrieval_context = tool_summary.get("retrieval_context")
         if retrieval_context is None and self._should_use_retrieval(message):
             retrieval_context = await self._run_retrieval(
@@ -359,8 +410,10 @@ class ConversationService:
                 rerank=rerank,
                 fusion_strategy=fusion_strategy,
             )
+        retrieval_ms = (time.perf_counter() - t0) * 1000
 
-        # Deduplicate and render clean context for the LLM
+        # Stage: prompt construction
+        t0 = time.perf_counter()
         deduped = self._deduplicate_context(retrieval_context)
         retrieved_context_text = self._render_retrieval_context(deduped)
         tool_outputs_text = self._render_tool_outputs(
@@ -388,6 +441,7 @@ class ConversationService:
             tool_descriptions=self.tool_executor.describe_tools(),
             tool_outputs=tool_outputs_text,
         )
+        prompt_build_ms = (time.perf_counter() - t0) * 1000
 
         tool_calls = tool_summary.get("tool_invocations", [])
 
@@ -410,13 +464,17 @@ class ConversationService:
                     "data": citation,
                 }
 
+        # Stage: LLM streaming — track time-to-first-token separately
         llm_start = time.perf_counter()
+        first_token_ms: Optional[float] = None
         answer_parts: list[str] = []
         try:
             async for chunk in self.llm_provider.astream(prompt_messages):
                 delta = str(chunk.get("delta", ""))
                 if not delta:
                     continue
+                if first_token_ms is None:
+                    first_token_ms = (time.perf_counter() - llm_start) * 1000
                 answer_parts.append(delta)
                 yield {
                     "event": "delta",
@@ -425,6 +483,13 @@ class ConversationService:
                     "data": {"delta": delta},
                 }
         except Exception as exc:
+            logger.error("LLM stream error: %s", str(exc), exc_info=True)
+            yield {
+                "event": "delta",
+                "conversation_id": conversation.id,
+                "message_id": user_message.id,
+                "data": {"delta": f"\n\n[SYSTEM ERROR: {str(exc)}]"},
+            }
             yield {
                 "event": "error",
                 "conversation_id": conversation.id,
@@ -436,6 +501,7 @@ class ConversationService:
         answer_text = "".join(answer_parts).strip()
         llm_latency_ms = (time.perf_counter() - llm_start) * 1000
         retrieval_documents = retrieval_context.documents if retrieval_context else []
+        retrieval_latency_ms = float(retrieval_context.latency_ms) if retrieval_context else 0.0
 
         # Always store full citations internally for the database record
         full_citations = self._build_citations(retrieval_context, debug=True)
@@ -463,10 +529,33 @@ class ConversationService:
             )
         )
         total_latency_ms = (time.perf_counter() - start_time) * 1000
+
+        # Structured latency summary — logged after every streaming turn
+        stage_breakdown = {
+            "conversation_load_ms": round(conv_load_ms, 2),
+            "memory_load_ms": round(memory_load_ms, 2),
+            "tool_execution_ms": round(tool_exec_ms, 2),
+            "retrieval_ms": round(retrieval_ms, 2),
+            "prompt_build_ms": round(prompt_build_ms, 2),
+            "llm_first_token_ms": round(first_token_ms or 0.0, 2),
+            "llm_total_ms": round(llm_latency_ms, 2),
+            "total_ms": round(total_latency_ms, 2),
+        }
+        slowest = max(
+            {k: v for k, v in stage_breakdown.items() if k not in ("total_ms", "llm_total_ms")},
+            key=stage_breakdown.get,
+        )
+        logger.info(
+            "stream_chat_latency_summary",
+            conversation_id=conversation.id,
+            slowest_stage=slowest,
+            **stage_breakdown,
+        )
+
         self._record_metrics(
             total_latency_ms=total_latency_ms,
             llm_latency_ms=llm_latency_ms,
-            retrieval_latency_ms=float(retrieval_context.latency_ms) if retrieval_context else 0.0,
+            retrieval_latency_ms=retrieval_latency_ms,
             tool_latency_ms=tool_summary.get("latency_ms", 0.0),
             token_usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
             conversation_id=conversation.id,

@@ -17,8 +17,14 @@ class RetrievalOrchestrator:
         self.planner = planner
 
     async def execute_search(self, query: SearchQuery) -> SearchSession:
-        """Execute a full search session."""
-        start_time = time.time()
+        """Execute a full search session.
+
+        Returns a SearchSession whose latency_ms dict contains both the
+        ``total`` key (wall-clock ms for the whole session) and granular
+        per-stage keys produced by the planner (e.g. query_embedding_ms,
+        audio_retrieval_ms, fusion_ms, …).
+        """
+        wall_start = time.perf_counter()
         session_id = str(uuid.uuid4())
 
         await self.event_bus.publish(
@@ -28,14 +34,15 @@ class RetrievalOrchestrator:
             )
         )
 
-        results = await self.planner.plan_and_execute(query)
+        results, stage_latencies = await self.planner.plan_and_execute(query)
 
-        latency_ms = (time.time() - start_time) * 1000
-        
+        total_ms = (time.perf_counter() - wall_start) * 1000
+        latency_ms = {"total": total_ms, **stage_latencies}
+
         await self.event_bus.publish(
             SearchCompleted(
                 result_count=len(results),
-                total_latency_ms=latency_ms,
+                total_latency_ms=total_ms,
             )
         )
 
@@ -43,5 +50,5 @@ class RetrievalOrchestrator:
             session_id=session_id,
             query=query,
             results=results,
-            latency_ms={"total": latency_ms},
+            latency_ms=latency_ms,
         )

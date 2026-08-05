@@ -91,6 +91,11 @@ class SentenceTransformerEmbedder(TextEmbeddingProvider):
             self._model, self._dimension = await loop.run_in_executor(None, load_sync)
             logger.info("Sentence Transformer model loaded successfully (dimension: %d).", self._dimension)
 
+    async def warmup(self) -> None:
+        """Pre-load model weights. Call at application startup to eliminate
+        first-request latency. Safe to call multiple times (idempotent)."""
+        await self._ensure_loaded()
+
     async def embed_text(self, text: str) -> np.ndarray:
         """Embed a single text string.
 

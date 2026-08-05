@@ -35,7 +35,7 @@ class GeminiChatProvider(LLMProvider):
             )
 
         try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_google_genai import ChatGoogleGenerativeAI, HarmCategory, HarmBlockThreshold
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise RuntimeError(
                 "langchain-google-genai is required for GeminiChatProvider"
@@ -46,6 +46,14 @@ class GeminiChatProvider(LLMProvider):
             google_api_key=self._api_key,
             temperature=self._temperature,
             max_output_tokens=self._max_output_tokens,
+            timeout=120.0,
+            max_retries=3,
+            safety_settings={
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            },
         )
         return self._client
 

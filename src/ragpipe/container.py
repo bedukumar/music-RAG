@@ -4,6 +4,7 @@ Dependency Injection Container.
 Wires up all the domain, infrastructure, and application components.
 """
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -322,6 +323,24 @@ class Container:
                 if original_cb:
                     original_cb(event)
             self.event_bus.set_broadcast_callback(combined_cb)
+
+        # Pre-warm ML models so the first chat request doesn't stall on
+        # model weight loading. Both embedders run concurrently.
+        # return_exceptions=True prevents a missing optional dependency
+        # (e.g. laion-clap not installed) from aborting startup.
+        logger.info("Pre-warming ML models (CLAP + SentenceTransformer)...")
+        warmup_results = await asyncio.gather(
+            self.audio_embedder.warmup(),
+            self.text_embedder.warmup(),
+            return_exceptions=True,
+        )
+        for i, result in enumerate(warmup_results):
+            name = ["CLAP", "SentenceTransformer"][i]
+            if isinstance(result, Exception):
+                logger.warning("ml_warmup_failed for %s: %s", name, str(result))
+            else:
+                logger.info("ml_warmup_complete for %s", name)
+
 
     def _pipeline_factory(self, modality: Modality) -> BasePipeline:
         """Factory to create the right pipeline based on modality."""

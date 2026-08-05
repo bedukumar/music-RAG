@@ -218,6 +218,8 @@ async def chat_stream(
                 )
                 yield f"event: {payload.event}\ndata: {payload.model_dump_json()}\n\n"
         except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error("SSE router error: %s", str(exc), exc_info=True)
             payload = StreamingResponse(
                 event="error",
                 conversation_id=request.conversation_id or "",
