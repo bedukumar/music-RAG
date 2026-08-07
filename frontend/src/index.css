@@ -182,8 +182,10 @@ button {
 /* Main content */
 .main-content {
   flex: 1;
+  min-width: 0;
   padding: 40px 48px;
   height: 100vh;
+  overflow: hidden;
 }
 
 /* ============================================================
