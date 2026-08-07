@@ -10,7 +10,7 @@
   overflow: clip;
   font-family: var(--font);
   border-radius: var(--r-3);
-  background-color: #0B0F14; /* Deep charcoal */
+  background-color: #000000; /* Deep black */
   background-image: radial-gradient(circle at 30% 30%, rgba(20,20,20,0.3), transparent),
                     radial-gradient(circle at 70% 70%, rgba(30,30,30,0.3), transparent);
   position: relative;
@@ -21,7 +21,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 4px);
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0) 1px, transparent 1px, transparent 4px);
   opacity: 0.05;
   animation: meshMove 20s linear infinite;
   pointer-events: none;
@@ -105,24 +105,38 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: var(--r-2);
+  padding: 10px 12px;
+  height: 40px;   /* locks both states to the same row height */
+  border-radius: 8px;
   cursor: pointer;
-  /* color: var(--text-2); */
-  transition: all var(--t-fast);
+  transition: background 200ms ease, border-color 200ms ease;
   border: 1px solid transparent;
+  position: relative;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .chat-list-item:hover {
-  background-color: var(--bg-2);
-  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .chat-list-item.active {
-  background-color: var(--bg-3);
-  color: var(--text-1);
-  border-color: var(--border-2);
-  box-shadow: var(--shadow-1);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Thin left accent bar on active item */
+.chat-list-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 2.5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .chat-list-item-title {
@@ -138,7 +152,7 @@
 .delete-btn {
   background: none;
   border: none;
-  color: var(--text-3);
+  color: var(--text-1);
   cursor: pointer;
   padding: 6px;
   border-radius: var(--r-1);
@@ -154,8 +168,57 @@
 }
 
 .delete-btn:hover {
-  background-color: var(--danger-bg);
-  color: var(--danger);
+  background-color: rgba(255, 80, 80, 0.15);
+  color: rgba(255, 120, 120, 1);
+}
+
+/* Inline delete confirmation row — must match .chat-list-item dimensions exactly */
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 20px; /* keeps row same height as icon + title row */
+  margin: -1px 0;  /* absorb the parent's border so it doesn't shift size */
+}
+
+.delete-confirm-label {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.delete-confirm-yes,
+.delete-confirm-no {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.delete-confirm-yes {
+  background: rgba(255, 80, 80, 0.2);
+  color: rgba(255, 130, 130, 1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+}
+
+.delete-confirm-yes:hover {
+  background: rgba(255, 80, 80, 0.35);
+  transform: scale(1.04);
+}
+
+.delete-confirm-no {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.delete-confirm-no:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.04);
 }
 
 /* ============================================================
@@ -1023,4 +1086,222 @@
   background-color: var(--bg-3);
   color: var(--text-1);
   border-left-color: var(--accent);
+}
+
+/* ============================================================
+   LIGHT MODE OVERRIDES
+   All hardcoded dark rgba / hex values in Chat.css are
+   neutralised here via [data-theme="light"] selectors.
+   ============================================================ */
+
+/* ── Layout shell ── */
+[data-theme="light"] .chat-layout {
+  background-color: #eef2ff;
+  background-image:
+    radial-gradient(circle at 30% 30%, rgba(199, 210, 255, 0.4), transparent),
+    radial-gradient(circle at 70% 70%, rgba(216, 224, 255, 0.3), transparent);
+}
+
+/* Soft pastel aurora curtains for light mode */
+[data-theme="light"] .chat-layout::before {
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0)    0%,
+    rgba(99, 102, 241, 0.28) 15%,
+    rgba(79, 172, 254, 0.32) 25%,
+    rgba(67, 211, 198, 0.22) 35%,
+    rgba(99, 102, 241, 0)    45%,
+    rgba(99, 102, 241, 0)    55%,
+    rgba(168, 85,  247, 0.22) 65%,
+    rgba(99, 102, 241, 0.28) 75%,
+    rgba(67, 211, 198, 0.28) 85%,
+    rgba(99, 102, 241, 0)    100%
+  );
+  opacity: 0.55;
+}
+
+[data-theme="light"] .chat-layout::after {
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0)    0%,
+    rgba(79, 172, 254, 0.28) 20%,
+    rgba(67, 211, 198, 0.2)  30%,
+    rgba(99, 102, 241, 0)    45%,
+    rgba(168, 85,  247, 0.2) 60%,
+    rgba(99, 102, 241, 0.25) 80%,
+    rgba(99, 102, 241, 0)    100%
+  );
+  opacity: 0.45;
+}
+
+/* ── Sidebar ── */
+[data-theme="light"] .chat-sidebar {
+  background-color: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+/* ── Chat list items ── */
+[data-theme="light"] .chat-list-item {
+  color: var(--text-2);
+}
+
+[data-theme="light"] .chat-list-item:hover {
+  background: rgba(0, 0, 0, 0.045);
+  color: var(--text-1);
+}
+
+[data-theme="light"] .chat-list-item.active {
+  background: rgba(75, 74, 207, 0.09);
+  border-color: rgba(75, 74, 207, 0.18);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px rgba(75, 74, 207, 0.07);
+}
+
+[data-theme="light"] .chat-list-item.active::before {
+  background: var(--accent);
+}
+
+/* ── Delete confirm ── */
+[data-theme="light"] .delete-confirm-label {
+  color: var(--text-2);
+}
+
+[data-theme="light"] .delete-confirm-no {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-2);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .delete-confirm-no:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+/* ── Icon action button ── */
+[data-theme="light"] .icon-action-btn {
+  color: var(--text-1);
+}
+
+[data-theme="light"] .icon-action-btn:hover {
+  color: var(--text-1);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Empty state (no active chat) ── */
+[data-theme="light"] .chat-layout.chat-layout-empty .chat-main {
+  background-color: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme="light"] .empty-state {
+  color: var(--text-1);
+}
+
+[data-theme="light"] .badge-pill {
+  background: rgba(75, 74, 207, 0.1);
+  border: 1px solid rgba(75, 74, 207, 0.22);
+  color: var(--accent);
+}
+
+[data-theme="light"] .empty-heading {
+  color: var(--text-1);
+}
+
+[data-theme="light"] .empty-subtitle {
+  color: var(--text-2);
+}
+
+/* ── CTA button ── */
+[data-theme="light"] .cta-button {
+  background: rgba(75, 74, 207, 0.1);
+  color: var(--accent);
+  box-shadow: 0 4px 14px rgba(75, 74, 207, 0.15);
+}
+
+[data-theme="light"] .cta-button:hover {
+  background: rgba(75, 74, 207, 0.16);
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* ── Capability chips ── */
+[data-theme="light"] .chip {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  color: var(--text-2);
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .chip:hover {
+  background: rgba(75, 74, 207, 0.07);
+  color: var(--accent);
+  box-shadow: 0 0 8px rgba(75, 74, 207, 0.15);
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* ── Feature cards ── */
+[data-theme="light"] .feature-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--text-2);
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .feature-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .feature-card::after {
+  background: linear-gradient(90deg, transparent, rgba(75, 74, 207, 0.3), transparent);
+}
+
+/* ── Collapsed popup (old hardcoded dark block) ── */
+[data-theme="light"] .collapsed-chat-popup {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-2);
+}
+
+[data-theme="light"] .collapsed-popup-header {
+  color: var(--text-3);
+}
+
+[data-theme="light"] .collapsed-popup-item {
+  color: var(--text-2);
+}
+
+[data-theme="light"] .collapsed-popup-item.active {
+  background: rgba(75, 74, 207, 0.07);
+  border-left-color: var(--accent);
+  color: var(--text-1);
+}
+
+[data-theme="light"] .collapsed-popup-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-1);
+}
+
+/* ── Collapsed sidebar icon wrapper ── */
+[data-theme="light"] .collapsed-chat-icon-wrapper {
+  color: var(--text-2);
+}
+
+[data-theme="light"] .collapsed-chat-icon-wrapper svg {
+  fill: none;
+  color: var(--text-2);
+}
+
+[data-theme="light"] .collapsed-chat-icon-wrapper:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text-1);
+}
+
+/* ── Noise mesh overlay — keep invisible on light bg ── */
+[data-theme="light"] .chat-layout > .chat-sidebar,
+[data-theme="light"] .chat-layout > .chat-main {
+  position: relative;
+  z-index: 1;
 }

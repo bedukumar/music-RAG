@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, SquarePen } from 'lucide-react';
 
 interface ConversationInfo {
@@ -26,6 +26,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isSidebarOpen,
   onToggleSidebar
 }) => {
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setConfirmId(id);
+  };
+
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirmId) onDelete(confirmId);
+    setConfirmId(null);
+  };
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmId(null);
+  };
+
   return (
     <div className="chat-sidebar">
       <div className="chat-sidebar-header">
@@ -62,18 +80,26 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               className={`chat-list-item ${activeId === conv.id ? 'active' : ''}`}
               onClick={() => onSelect(conv.id)}
             >
-              <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
-              <span className="chat-list-item-title">{conv.title || 'New Conversation'}</span>
-              <button
-                className="delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(conv.id);
-                }}
-                title="Delete conversation"
-              >
-                <Trash2 size={14} />
-              </button>
+              {confirmId === conv.id ? (
+                /* Inline confirmation row */
+                <div className="delete-confirm" onClick={e => e.stopPropagation()}>
+                  <span className="delete-confirm-label">Delete?</span>
+                  <button className="delete-confirm-yes" onClick={handleConfirm}>Yes</button>
+                  <button className="delete-confirm-no" onClick={handleCancel}>No</button>
+                </div>
+              ) : (
+                <>
+                  <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+                  <span className="chat-list-item-title">{conv.title || 'New Conversation'}</span>
+                  <button
+                    className="delete-btn"
+                    onClick={(e) => handleDeleteClick(e, conv.id)}
+                    title="Delete conversation"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </>
+              )}
             </div>
           ))
         )}
