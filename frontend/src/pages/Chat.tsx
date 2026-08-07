@@ -88,10 +88,25 @@ const Chat: React.FC = () => {
             onUpdateTitle={(title) => handleUpdateTitle(activeConversationId, title)}
           />
         ) : (
-          <div className="chat-empty-state">
-            <h2>Welcome to RagPipe Chat</h2>
-            <p>Select a conversation or start a new one to begin.</p>
-            <button className="primary-button" onClick={handleNewChat}>Start New Chat</button>
+          <div className="empty-state">
+            <div className="badge-pill">AI-Powered Music Intelligence</div>
+            <h1 className="empty-heading">Talk to Your Music Knowledge Base</h1>
+            <p className="empty-subtitle">Search. Analyze. Discover.</p>
+            <button className="cta-button" onClick={handleNewChat}>Start a Conversation <svg className="cta-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></button>
+            <div className="capability-chips">
+              <div className="chip">
+                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14 10l-4 4m0-4l4 4"/></svg>
+                Semantic Search
+              </div>
+              <div className="chip">
+                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><polygon points="9 18 5 22 5 9 9 5"/></svg>
+                Audio Retrieval
+              </div>
+              <div className="chip">
+                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>
+                Natural Language Queries
+              </div>
+            </div>
           </div>
         )}
       </div>

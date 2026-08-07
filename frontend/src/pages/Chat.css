@@ -7,16 +7,39 @@
   max-height: 100%;
   width: 100%;
   gap: 0px;
-  overflow: clip; /* clip instead of hidden — truly clips 3D-transformed children */
+  overflow: clip;
   font-family: var(--font);
   border-radius: var(--r-3);
-  background-color: #030014; /* Deep midnight sky */
-  background-image: 
-    radial-gradient(circle at top right, rgba(13, 148, 136, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+  background-color: #0B0F14; /* Deep charcoal */
+  background-image: radial-gradient(circle at 30% 30%, rgba(20,20,20,0.3), transparent),
+                    radial-gradient(circle at 70% 70%, rgba(30,30,30,0.3), transparent);
   position: relative;
   isolation: isolate;
 }
+/* Subtle animated mesh/noise */
+.chat-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 4px);
+  opacity: 0.05;
+  animation: meshMove 20s linear infinite;
+  pointer-events: none;
+}
+@keyframes meshMove {
+  from { background-position: 0 0; }
+  to { background-position: 100px 100px; }
+}
+/* Low‑opacity waveform illustration */
+.chat-layout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml,%3Csvg width="800" height="600" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M0 300 Q200 250 400 300 T800 300" stroke="rgba(255,255,255,0.07)" stroke-width="2" fill="none"%3E%3C/path%3E%3C/svg%3E') center/cover no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
 
 /* ============================================================
    SIDEBAR
@@ -246,47 +269,180 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
-.chat-empty-state {
+.empty-state {
+  max-width: 700px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  gap: 24px;
+  padding: 48px 24px;
   text-align: center;
-  padding: 32px;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255,255,255,0.9);
 }
 
-.chat-empty-state h2 {
-  color: var(--text-1);
-  margin-bottom: 12px;
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+.badge-pill {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #fff;
 }
 
-.chat-empty-state p {
-  margin-bottom: 32px;
-  font-size: 15px;
-  max-width: 400px;
-  line-height: 1.5;
+.empty-heading {
+  font-family: var(--font), 'Inter', 'Plus Jakarta Sans', 'Geist', 'SF Pro Display';
+  font-size: 60px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0;
+  color: #fff;
+  letter-spacing: -0.015em;
 }
 
-.chat-empty-state button {
-  padding: 12px 24px;
-  font-size: 15px;
-  background-color: var(--bg-3);
-  color: var(--text-1);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-3);
+.empty-subtitle {
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  max-width: 500px;
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px; /* increased spacing */
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 600; /* medium weight */
   cursor: pointer;
-  transition: all var(--t-fast);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  transition: transform var(--t-fast), background var(--t-fast);
+  transform: translateY(0) scale(1);
 }
 
-.chat-empty-state button:hover {
-  background-color: var(--bg-4);
-  border-color: var(--border-3);
+.cta-button:hover {
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-2px) scale(1.02);
 }
+
+.cta-arrow {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: transform var(--t-fast), opacity var(--t-fast);
+}
+
+.cta-button:hover .cta-arrow {
+  transform: translateX(6px);
+  opacity: 1;
+}
+
+/* Capability chips */
+.capability-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px; /* whitespace below CTA */
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 14px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  animation: chipFade 300ms forwards;
+}
+
+.chip:hover {
+  background: rgba(255,255,255,0.09);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 0 8px rgba(255,255,255,0.3);
+}
+
+.chip-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+}
+
+.chip:nth-child(1) { animation-delay: 0ms; }
+.chip:nth-child(2) { animation-delay: 80ms; }
+.chip:nth-child(3) { animation-delay: 160ms; }
+
+@keyframes chipFade {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.feature-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.feature-card {
+  flex: 0 1 180px;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: #fff;
+  text-align: center;
+  transition: background var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.feature-card:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+}
+
+.feature-card::after {
+  content: '';
+  display: block;
+  height: 2px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+
+.feature-card:hover::after {
+  opacity: 0.6;
+}
+
+/* Fade‑up and scale animations for elements */
+.empty-state > * {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+  animation: fadeUp 300ms forwards;
+}
+.empty-state > *:nth-child(1) { animation-delay: 0ms; }
+.empty-state > *:nth-child(2) { animation-delay: 80ms; }
+.empty-state > *:nth-child(3) { animation-delay: 160ms; }
+.empty-state > *:nth-child(4) { animation-delay: 240ms; }
+.empty-state > *:nth-child(5) { animation-delay: 320ms; }
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 
 .chat-window {
   display: flex;
