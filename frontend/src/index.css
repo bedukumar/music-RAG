@@ -53,6 +53,7 @@
 
   /* Transitions */
   --t-fast:   100ms ease;
+  --t-super-fast: 50ms ease;
   --t-normal: 180ms ease;
 
   /* ── Legacy variable aliases (keep old inline styles working) ── */

@@ -71,7 +71,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className={`chat-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
+    <div className={`chat-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!activeConversationId ? 'chat-layout-empty' : ''}`}>
       <ChatSidebar
         conversations={conversations}
         activeId={activeConversationId}
