@@ -103,4 +103,22 @@ export const ChatAPI = {
   }
 };
 
+export const BulkUploadAPI = {
+  create: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/bulk-uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data);
+  },
+  list: (params: { status?: string; offset?: number; limit?: number } = {}) => 
+    api.get('/bulk-uploads', { params }).then(res => res.data),
+  get: (id: string) => api.get(`/bulk-uploads/${id}`).then(res => res.data),
+  errors: (id: string, params: { offset?: number; limit?: number } = {}) => 
+    api.get(`/bulk-uploads/${id}/errors`, { params }).then(res => res.data),
+  pause: (id: string) => api.post(`/bulk-uploads/${id}/pause`).then(res => res.data),
+  resume: (id: string) => api.post(`/bulk-uploads/${id}/resume`).then(res => res.data),
+  retry: (id: string) => api.post(`/bulk-uploads/${id}/retry`).then(res => res.data),
+};
+
 export default api;

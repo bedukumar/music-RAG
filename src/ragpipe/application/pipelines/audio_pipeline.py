@@ -62,8 +62,32 @@ class AudioPipeline(BasePipeline):
         media = await self.media_repo.get(context["media_id"])
         if not media:
             raise InvalidMediaError("Media not found")
+            
+        if not media.audio_path and media.source_url:
+            import httpx
+            from dataclasses import replace
+            
+            try:
+                # Use httpx to download the file from the source_url
+                async with httpx.AsyncClient(follow_redirects=True) as client:
+                    response = await client.get(media.source_url)
+                    response.raise_for_status()
+                    
+                # Save it to storage
+                # Since URLs might not have extensions, default to .mp3
+                filename = f"{media.id}.mp3"
+                object_key = f"audio/{filename}"
+                await self.file_storage.save(object_key, response.content)
+                
+                # Update media record
+                media = replace(media, audio_path=object_key)
+                await self.media_repo.update(media)
+            except Exception as e:
+                raise InvalidMediaError(f"Failed to download audio from {media.source_url}: {e}")
+
         if not media.audio_path:
-            raise InvalidMediaError("Media has no audio_path")
+            raise InvalidMediaError("Media has no audio_path and no valid source_url")
+            
         if not await self.file_storage.exists(media.audio_path):
             raise InvalidMediaError(f"Audio file not found at {media.audio_path}")
             

@@ -57,6 +57,8 @@ from ragpipe.infrastructure.locking.db_lock_manager import DatabaseLockManager
 from ragpipe.infrastructure.metrics.prometheus_metrics import PrometheusMetricsCollector
 from ragpipe.infrastructure.storage.local_file_storage import LocalFileStorage
 from ragpipe.infrastructure.vector.qdrant_repository import QdrantVectorRepository
+from ragpipe.application.services.bulk_upload_service import BulkUploadService
+from ragpipe.infrastructure.database.bulk_upload_repository import SQLAlchemyBulkUploadRepository
 
 # Retrieval Pipeline Imports
 from ragpipe.application.retrieval.planner import RetrievalPlanner
@@ -115,6 +117,12 @@ class Container:
         self.media_query_service: Optional[MediaQueryService] = None
         self.collection_service: Optional[CollectionService] = None
         self.conversation_service: Optional[ConversationService] = None
+
+        # Bulk upload components (optional — require S3 + SQS env vars)
+        self.object_storage = None
+        self.message_queue = None
+        self.bulk_upload_repository = None
+        self.bulk_upload_service = None
         
         # Retrieval Pipeline
         self.retrieval_search_service: Optional[RetrievalSearchService] = None
@@ -216,6 +224,9 @@ class Container:
         self.recovery_manager = RecoveryManager(
             self.vector_repository, self.media_repository, self.event_bus
         )
+
+        # Bulk upload infrastructure — wired only when env vars are present
+        await self._init_bulk_upload_components()
         
         # Initialize Retrieval Pipeline Components
         qdrant_client = self.vector_repository._client
@@ -383,3 +394,67 @@ class Container:
             await self._shared_session.close()
         if self.engine:
             await self.engine.dispose()
+
+    async def _init_bulk_upload_components(self) -> None:
+        """Initialise S3, SQS and BulkUploadService when env vars are configured.
+
+        This is a best-effort initialisation: if boto3 is not installed or env
+        vars are missing, we log a warning and continue.  The bulk upload API
+        endpoints will return 503 in that case.
+        """
+        import os
+        from ragpipe.config.settings import S3Settings, SQSSettings
+
+        s3_cfg = S3Settings()
+        sqs_cfg = SQSSettings()
+
+        if not s3_cfg.s3_endpoint_url and not os.getenv("AWS_ACCESS_KEY_ID"):
+            logger.info("bulk_upload_s3_not_configured: Set S3_ENDPOINT_URL (LocalStack) or AWS credentials to enable bulk uploads")
+            return
+
+        if not sqs_cfg.sqs_queue_url:
+            logger.info("bulk_upload_sqs_not_configured: Set SQS_QUEUE_URL to enable bulk uploads")
+            return
+
+        try:
+            from ragpipe.infrastructure.storage.s3_object_storage import S3ObjectStorage
+            from ragpipe.infrastructure.queue.sqs_message_queue import SQSMessageQueue
+
+            self.object_storage = S3ObjectStorage(
+                bucket=s3_cfg.s3_bucket,
+                region=s3_cfg.aws_region,
+                endpoint_url=s3_cfg.s3_endpoint_url,
+                aws_access_key_id=s3_cfg.aws_access_key_id,
+                aws_secret_access_key=s3_cfg.aws_secret_access_key,
+            )
+
+            self.message_queue = SQSMessageQueue(
+                queue_url=sqs_cfg.sqs_queue_url,
+                region=s3_cfg.aws_region,
+                endpoint_url=sqs_cfg.sqs_endpoint_url,
+                aws_access_key_id=s3_cfg.aws_access_key_id,
+                aws_secret_access_key=s3_cfg.aws_secret_access_key,
+                visibility_timeout=sqs_cfg.sqs_visibility_timeout,
+                wait_time_seconds=sqs_cfg.sqs_wait_time_seconds,
+            )
+
+            self.bulk_upload_repository = SQLAlchemyBulkUploadRepository(
+                self._shared_session
+            )
+
+            self.bulk_upload_service = BulkUploadService(
+                object_storage=self.object_storage,
+                message_queue=self.message_queue,
+                bulk_upload_repository=self.bulk_upload_repository,
+                event_bus=self.event_bus,
+                metrics=self.metrics,
+                s3_bucket=s3_cfg.s3_bucket,
+            )
+
+            logger.info(f"bulk_upload_initialized: bucket={s3_cfg.s3_bucket}, queue={sqs_cfg.sqs_queue_url}")
+
+        except ImportError:
+            logger.warning("bulk_upload_boto3_missing: Install boto3 with: pip install 'ragpipe[bulk]'")
+        except Exception as exc:
+            logger.warning(f"bulk_upload_init_failed: error={exc}")
+

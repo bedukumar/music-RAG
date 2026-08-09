@@ -312,3 +312,51 @@ def get_settings() -> Settings:
         Settings: Application settings loaded from environment.
     """
     return Settings()
+
+
+# ---------------------------------------------------------------------------
+# Bulk upload settings (S3 + SQS)
+# ---------------------------------------------------------------------------
+
+
+class S3Settings(BaseSettings):
+    """AWS S3 / LocalStack object storage settings.
+
+    All values are read from the environment without any prefix so that standard
+    AWS SDK environment variable names are used directly.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=(".env", ".env.localstack"),
+        env_file_encoding="utf-8",
+        env_prefix="",
+        extra="ignore",
+    )
+
+    aws_region: str = Field(default="us-east-1", alias="AWS_REGION")
+    aws_access_key_id: Optional[str] = Field(default=None, alias="AWS_ACCESS_KEY_ID")
+    aws_secret_access_key: Optional[str] = Field(
+        default=None, alias="AWS_SECRET_ACCESS_KEY"
+    )
+    s3_bucket: str = Field(default="ragpipe-bulk-uploads", alias="S3_BUCKET")
+    # Set to http://localhost:4566 for LocalStack; leave unset for real AWS
+    s3_endpoint_url: Optional[str] = Field(default=None, alias="S3_ENDPOINT_URL")
+
+
+class SQSSettings(BaseSettings):
+    """AWS SQS / LocalStack message queue settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=(".env", ".env.localstack"),
+        env_file_encoding="utf-8",
+        env_prefix="",
+        extra="ignore",
+    )
+
+    sqs_queue_url: str = Field(default="", alias="SQS_QUEUE_URL")
+    sqs_dlq_url: Optional[str] = Field(default=None, alias="SQS_DLQ_URL")
+    # Set to http://localhost:4566 for LocalStack; leave unset for real AWS
+    sqs_endpoint_url: Optional[str] = Field(default=None, alias="SQS_ENDPOINT_URL")
+    sqs_visibility_timeout: int = Field(default=300, alias="SQS_VISIBILITY_TIMEOUT")
+    sqs_max_receive_count: int = Field(default=5, alias="SQS_MAX_RECEIVE_COUNT")
+    sqs_wait_time_seconds: int = Field(default=20, alias="SQS_WAIT_TIME_SECONDS")

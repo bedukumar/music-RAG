@@ -51,20 +51,25 @@ class MediaRegistrar:
         self.metrics.increment("media_registered_total", tags={"type": media.media_type.value})
 
         # Set up modalities based on provided data
-        has_audio = bool(media.audio_path)
-        
+        has_audio = bool(media.audio_path) or bool(media.source_url)
+        audio_data_available = has_audio
+
         has_transcript = False
+        transcript_data_available = False
         if hasattr(media, "transcript_text") and media.transcript_text:
             has_transcript = True
+            transcript_data_available = True
         elif hasattr(media, "lyrics") and media.lyrics:
             has_transcript = True
+            transcript_data_available = True
             
         has_metadata = bool(media.metadata_fields)
+        metadata_data_available = has_metadata
 
         statuses = [
-            ModalityStatus(media.id, Modality.AUDIO, has_audio, "pending" if has_audio else "skipped", None, None, None),
-            ModalityStatus(media.id, Modality.TRANSCRIPT, has_transcript, "pending" if has_transcript else "skipped", None, None, None),
-            ModalityStatus(media.id, Modality.METADATA, has_metadata, "pending" if has_metadata else "skipped", None, None, None),
+            ModalityStatus(media.id, Modality.AUDIO, audio_data_available, "pending" if has_audio else "skipped", None, None, None),
+            ModalityStatus(media.id, Modality.TRANSCRIPT, transcript_data_available, "pending" if has_transcript else "skipped", None, None, None),
+            ModalityStatus(media.id, Modality.METADATA, metadata_data_available, "pending" if has_metadata else "skipped", None, None, None),
         ]
 
         for status in statuses:
@@ -86,17 +91,22 @@ class MediaRegistrar:
             await self.media_repo.save_batch(media_items)
             statuses = []
             for media in media_items:
-                has_audio = bool(media.audio_path)
+                has_audio = bool(media.audio_path) or bool(media.source_url)
+                audio_data_available = has_audio
                 has_transcript = False
+                transcript_data_available = False
                 if hasattr(media, "transcript_text") and media.transcript_text:
                     has_transcript = True
+                    transcript_data_available = True
                 elif hasattr(media, "lyrics") and media.lyrics:
                     has_transcript = True
+                    transcript_data_available = True
                 has_metadata = bool(media.metadata_fields)
+                metadata_data_available = has_metadata
                 statuses.extend([
-                    ModalityStatus(media.id, Modality.AUDIO, has_audio, "pending" if has_audio else "skipped", None, None, None),
-                    ModalityStatus(media.id, Modality.TRANSCRIPT, has_transcript, "pending" if has_transcript else "skipped", None, None, None),
-                    ModalityStatus(media.id, Modality.METADATA, has_metadata, "pending" if has_metadata else "skipped", None, None, None),
+                    ModalityStatus(media.id, Modality.AUDIO, audio_data_available, "pending" if has_audio else "skipped", None, None, None),
+                    ModalityStatus(media.id, Modality.TRANSCRIPT, transcript_data_available, "pending" if has_transcript else "skipped", None, None, None),
+                    ModalityStatus(media.id, Modality.METADATA, metadata_data_available, "pending" if has_metadata else "skipped", None, None, None),
                 ])
                 successful.append(media.id)
                 self.metrics.increment("media_registered_total", tags={"type": media.media_type.value})

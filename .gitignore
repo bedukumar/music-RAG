@@ -127,7 +127,13 @@ node.tar.xz
 api-doc.json
 AGENTS.md
 .codex
+.env.localstack
+.env*
+.env
+.env.*
+!.env.example
 
 test_all_apis.py
 
 node/
+*/.env.*

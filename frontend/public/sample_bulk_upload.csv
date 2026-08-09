@@ -1,0 +1,5 @@
+title,media_type,artist,album,genre,language,tags,source_url,transcript_text
+"Sample Song 1",song,"John Doe","Greatest Hits","Pop","en","upbeat, summer","https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+"Podcast Episode 5",podcast,"Tech Talk","Tech Talk Daily","Technology","en","tech, news","https://soundcloud.com/tech-talk/episode-5","Welcome to episode 5..."
+"Interview with CEO",interview,"Business Weekly",,Business,"en","business, interview","https://example.com/audio/ceo-interview.mp3",
+"Background Music",song,"Unknown",,"Classical",,"instrumental, calm","s3://music-catalog-bucket/classical/bg_music.mp3",

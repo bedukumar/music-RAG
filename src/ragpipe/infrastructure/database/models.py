@@ -333,3 +333,86 @@ class ConversationMessageORM(Base):
         Index("idx_conversation_messages_conversation_created", "conversation_id", "created_at"),
         Index("idx_conversation_messages_role", "role"),
     )
+
+
+class BulkUploadORM(Base):
+    """ORM model for bulk upload batches.
+
+    Each row in this table represents a single file (CSV or XLSX) that was
+    submitted via the bulk upload API.  It is kept entirely separate from the
+    existing ``JobORM`` table — a ``BulkUpload`` produces many ``Jobs`` once
+    its rows are parsed by the worker.
+    """
+
+    __tablename__ = "bulk_uploads"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    object_key: Mapped[str] = mapped_column(String(1000), nullable=False)
+    bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=False)
+    total_rows: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    processed_rows: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    successful_rows: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed_rows: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    rows: Mapped[list["BulkUploadRowORM"]] = relationship(
+        back_populates="bulk_upload", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("idx_bulk_upload_status", "status"),
+        Index("idx_bulk_upload_created", "created_at"),
+    )
+
+
+class BulkUploadRowORM(Base):
+    """ORM model for individual row outcomes within a bulk upload batch.
+
+    The unique constraint on ``(bulk_upload_id, row_number)`` is the canonical
+    idempotency key used to prevent duplicate processing when an SQS message
+    is delivered more than once.
+    """
+
+    __tablename__ = "bulk_upload_rows"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    bulk_upload_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("bulk_uploads.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    row_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    # Nullable FK — only set when the row produced a media record
+    media_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    # Relationships
+    bulk_upload: Mapped["BulkUploadORM"] = relationship(back_populates="rows")
+
+    __table_args__ = (
+        # Idempotency constraint: same bulk_upload + row_number = same logical work unit
+        UniqueConstraint(
+            "bulk_upload_id", "row_number", name="uq_bulk_upload_row"
+        ),
+        Index("idx_bulk_upload_row_status", "bulk_upload_id", "status"),
+        Index("idx_bulk_upload_row_lookup", "bulk_upload_id", "row_number"),
+    )
+

@@ -13,6 +13,8 @@ import SearchAnalytics from './pages/SearchAnalytics';
 import SearchSettings from './pages/SearchSettings';
 import ThemeToggle from './components/ThemeToggle';
 import ApiDocs from './pages/ApiDocs';
+import BulkUpload from './pages/BulkUpload';
+import { UploadCloud } from 'lucide-react';
 
 function MainLayout() {
   return (
@@ -57,6 +59,13 @@ function MainLayout() {
           >
             <ListMusic size={14} strokeWidth={2} />
             Media Catalog
+          </NavLink>
+          <NavLink
+            to="/bulk-upload"
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+          >
+            <UploadCloud size={14} strokeWidth={2} />
+            Bulk Upload
           </NavLink>
           <NavLink
             to="/jobs"
@@ -104,6 +113,7 @@ function MainLayout() {
           <Route path="/search/settings"    element={<SearchSettings />} />
           <Route path="/media"              element={<MediaCatalog />} />
           <Route path="/media/:id"          element={<MediaDetails />} />
+          <Route path="/bulk-upload"        element={<BulkUpload />} />
           <Route path="/jobs"               element={<JobsMonitor />} />
           <Route path="/collections"        element={<Collections />} />
           <Route path="/settings"           element={<Settings />} />

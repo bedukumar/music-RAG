@@ -58,8 +58,14 @@ dev = [
     "ruff>=0.2.0",
     "mypy>=1.8.0",
 ]
+bulk = [
+    # AWS S3 + SQS infrastructure
+    "boto3>=1.34.0",
+    # XLSX parsing (lazy row iteration via openpyxl read_only mode)
+    "openpyxl>=3.1.0",
+]
 all = [
-    "ragpipe[clap,dev]",
+    "ragpipe[clap,dev,bulk]",
 ]
 
 [project.scripts]
@@ -70,8 +76,10 @@ packages = ["src/ragpipe"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 markers = [
     "integration: Integration tests (require external services)",
+    "localstack: Tests that require a running LocalStack instance",
     "slow: Slow tests (embedding model loading, etc.)",
 ]
 

@@ -1,0 +1,35 @@
+
+# LocalStack — S3 + SQS for local development
+#
+# Usage:
+#   docker compose -f deployment/localstack/docker-compose.localstack.yml up -d
+#
+# The init-aws.sh script runs automatically on startup and creates:
+#   - S3 bucket: ragpipe-bulk-uploads
+#   - SQS queue: ragpipe-bulk-uploads
+#   - SQS DLQ:   ragpipe-bulk-uploads-dlq (with redrive policy attached)
+
+services:
+  localstack:
+    image: localstack/localstack:3
+    container_name: ragpipe-localstack
+    ports:
+      - "4566:4566"     # LocalStack gateway (all services)
+      - "4510-4559:4510-4559"  # Legacy port range (optional)
+    environment:
+      DEFAULT_REGION: us-east-1
+      DEBUG: "0"
+      # Dummy credentials — LocalStack accepts anything
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      # init-aws.sh runs automatically when LocalStack is ready
+      - "./init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+

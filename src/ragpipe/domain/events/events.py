@@ -389,3 +389,99 @@ class JobRetried(DomainEvent):
     def __post_init__(self) -> None:
         """Auto-populate ``event_type`` from class constant."""
         object.__setattr__(self, "event_type", self.EVENT_TYPE)
+
+
+# ---------------------------------------------------------------------------
+# Bulk upload events
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BulkUploadStarted(DomainEvent):
+    """Emitted when the bulk upload worker begins processing a batch.
+
+    Attributes:
+        bulk_upload_id: The batch identifier.
+        total_rows: Number of rows detected in the file.
+    """
+
+    EVENT_TYPE: str = field(default="bulk_upload.started", init=False, repr=False)
+
+    bulk_upload_id: str = ""
+    total_rows: int = 0
+
+    def __post_init__(self) -> None:
+        """Auto-populate ``event_type`` from class constant."""
+        object.__setattr__(self, "event_type", self.EVENT_TYPE)
+
+
+@dataclass(frozen=True)
+class BulkUploadRowProcessed(DomainEvent):
+    """Emitted after a single CSV/XLSX row is successfully registered.
+
+    Attributes:
+        bulk_upload_id: The parent batch identifier.
+        row_number: 1-indexed row number within the file.
+        media_id: The media item created from this row.
+    """
+
+    EVENT_TYPE: str = field(default="bulk_upload.row_processed", init=False, repr=False)
+
+    bulk_upload_id: str = ""
+    row_number: int = 0
+    media_id: str = ""
+
+    def __post_init__(self) -> None:
+        """Auto-populate ``event_type`` from class constant."""
+        object.__setattr__(self, "event_type", self.EVENT_TYPE)
+
+
+@dataclass(frozen=True)
+class BulkUploadRowFailed(DomainEvent):
+    """Emitted when a single CSV/XLSX row fails validation or registration.
+
+    A row failure must NOT fail the overall batch — it simply increments the
+    failure counter and allows the worker to continue.
+
+    Attributes:
+        bulk_upload_id: The parent batch identifier.
+        row_number: 1-indexed row number within the file.
+        error_type: Short error category (e.g. ``validation_error``).
+        error_message: Human-readable error detail.
+    """
+
+    EVENT_TYPE: str = field(default="bulk_upload.row_failed", init=False, repr=False)
+
+    bulk_upload_id: str = ""
+    row_number: int = 0
+    error_type: str = ""
+    error_message: str = ""
+
+    def __post_init__(self) -> None:
+        """Auto-populate ``event_type`` from class constant."""
+        object.__setattr__(self, "event_type", self.EVENT_TYPE)
+
+
+@dataclass(frozen=True)
+class BulkUploadCompleted(DomainEvent):
+    """Emitted when all rows of a bulk upload have been processed.
+
+    Attributes:
+        bulk_upload_id: The batch identifier.
+        status: Final status (``COMPLETED`` or ``COMPLETED_WITH_ERRORS``).
+        total_rows: Total rows in the file.
+        successful_rows: Rows that produced valid media records.
+        failed_rows: Rows that failed validation or registration.
+    """
+
+    EVENT_TYPE: str = field(default="bulk_upload.completed", init=False, repr=False)
+
+    bulk_upload_id: str = ""
+    status: str = ""
+    total_rows: int = 0
+    successful_rows: int = 0
+    failed_rows: int = 0
+
+    def __post_init__(self) -> None:
+        """Auto-populate ``event_type`` from class constant."""
+        object.__setattr__(self, "event_type", self.EVENT_TYPE)
