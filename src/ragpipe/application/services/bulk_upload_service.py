@@ -3,13 +3,10 @@
 Orchestrates the HTTP-facing bulk upload workflow:
 
 1. Validate the uploaded file type.
-2. Upload the raw file bytes to S3 via the ``ObjectStorage`` port.
+2. Save the raw file bytes locally via the ``FileStorage`` port.
 3. Create a ``BulkUpload`` database record with status ``PENDING``.
-4. Publish a ``bulk_upload.created`` message to SQS via the ``MessageQueue`` port.
+4. Dispatch background processing using ``BulkUploadProcessor``.
 5. Return the ``BulkUpload`` to the caller (the HTTP layer returns 202 Accepted).
-
-This service deliberately does NOT parse the CSV/XLSX — that happens inside the
-dedicated ``BulkUploadWorker`` process which consumes the SQS message.
 
 Allowed file types: ``text/csv``, ``application/vnd.ms-excel``,
 ``application/vnd.openxmlformats-officedocument.spreadsheetml.sheet``,
@@ -18,6 +15,7 @@ Allowed file types: ``text/csv``, ``application/vnd.ms-excel``,
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -26,9 +24,9 @@ import structlog
 from ragpipe.domain.models.bulk_upload import BulkUpload, BulkUploadStatus
 from ragpipe.domain.ports.bulk_upload_repository import BulkUploadRepository
 from ragpipe.domain.ports.event_bus import EventBus
-from ragpipe.domain.ports.message_queue import MessageQueue
+from ragpipe.domain.ports.file_storage import FileStorage
 from ragpipe.domain.ports.metrics_collector import MetricsCollector
-from ragpipe.domain.ports.object_storage import ObjectStorage
+from ragpipe.application.services.bulk_upload_processor import BulkUploadProcessor
 
 logger = structlog.get_logger(__name__)
 
@@ -45,9 +43,6 @@ ALLOWED_CONTENT_TYPES = frozenset(
 
 ALLOWED_EXTENSIONS = frozenset([".csv", ".xlsx", ".xls"])
 
-# SQS message version — increment if the message schema changes
-_MESSAGE_VERSION = 1
-
 
 class BulkUploadService:
     """Application service for bulk upload orchestration.
@@ -58,19 +53,17 @@ class BulkUploadService:
 
     def __init__(
         self,
-        object_storage: ObjectStorage,
-        message_queue: MessageQueue,
+        file_storage: FileStorage,
         bulk_upload_repository: BulkUploadRepository,
+        bulk_upload_processor: BulkUploadProcessor,
         event_bus: EventBus,
         metrics: MetricsCollector,
-        s3_bucket: str,
     ) -> None:
-        self._object_storage = object_storage
-        self._queue = message_queue
+        self._file_storage = file_storage
         self._repo = bulk_upload_repository
+        self._processor = bulk_upload_processor
         self._event_bus = event_bus
         self._metrics = metrics
-        self._bucket = s3_bucket
 
     # ------------------------------------------------------------------
     # Public interface
@@ -94,56 +87,41 @@ class BulkUploadService:
 
         Raises:
             ValueError: If the file type is not supported.
-            ObjectStorageError: On S3 upload failure.
-            MessageQueueError: On SQS publish failure.
         """
         self._validate_file_type(original_filename, content_type)
 
         log = logger.bind(original_filename=original_filename)
 
-        # 1. Build S3 key
+        # 1. Build local path
         import uuid as _uuid
         import os
         batch_id = str(_uuid.uuid4())
         ext = os.path.splitext(original_filename)[1].lower() or ".csv"
-        object_key = f"bulk-uploads/{batch_id}/{original_filename}"
+        # store locally using FileStorage
+        file_path = f"bulk-uploads/{batch_id}/{original_filename}"
 
-        # 2. Upload to S3
-        log.info("bulk_upload_s3_uploading", object_key=object_key)
-        await self._object_storage.upload(
-            key=object_key,
-            data=file_bytes,
-            content_type=content_type,
-        )
-        log.info("bulk_upload_s3_uploaded", object_key=object_key, bytes=len(file_bytes))
+        # 2. Save locally
+        log.info("bulk_upload_saving", file_path=file_path)
+        self._file_storage.save(file_path, file_bytes)
+        log.info("bulk_upload_saved", file_path=file_path, bytes=len(file_bytes))
 
-        # 3. Create BulkUpload domain object with the S3-assigned ID
+        # 3. Create BulkUpload domain object
         bulk_upload = BulkUpload.create(
-            object_key=object_key,
-            bucket=self._bucket,
+            object_key=file_path,
+            bucket="local",
             original_filename=original_filename,
         )
-        # Override the auto-generated id to match the S3 prefix so they're traceable
+        # Override the auto-generated id to match the prefix so they're traceable
         bulk_upload.id = batch_id
 
         await self._repo.save(bulk_upload)
         log.info("bulk_upload_db_created", bulk_upload_id=bulk_upload.id)
 
-        # 4. Publish SQS message — body carries only identifiers, never the file bytes
-        message_body = {
-            "event_type": "bulk_upload.created",
-            "bulk_upload_id": bulk_upload.id,
-            "bucket": self._bucket,
-            "object_key": object_key,
-            "original_filename": original_filename,
-            "version": _MESSAGE_VERSION,
-        }
-        message_id = await self._queue.send_message(message_body)
-        log.info(
-            "bulk_upload_sqs_published",
-            bulk_upload_id=bulk_upload.id,
-            message_id=message_id,
+        # 4. Trigger local background processing instead of SQS
+        asyncio.create_task(
+            self._processor.process_bulk_upload(bulk_upload.id, file_bytes)
         )
+        log.info("bulk_upload_task_dispatched", bulk_upload_id=bulk_upload.id)
 
         self._metrics.increment(
             "bulk_uploads_submitted_total",

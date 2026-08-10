@@ -137,3 +137,7 @@ test_all_apis.py
 
 node/
 */.env.*
+
+scratch
+ragpipe.*
+.gitignore

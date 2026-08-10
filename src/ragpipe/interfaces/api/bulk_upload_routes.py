@@ -34,17 +34,7 @@ MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 
 def _get_service(request: Request):
     """Resolve BulkUploadService from the DI container."""
-    svc = getattr(request.app.state.container, "bulk_upload_service", None)
-    if svc is None:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Bulk upload service is not available. "
-                "Configure S3 (S3_BUCKET, S3_ENDPOINT_URL) and "
-                "SQS (SQS_QUEUE_URL, SQS_ENDPOINT_URL) environment variables."
-            ),
-        )
-    return svc
+    return request.app.state.container.bulk_upload_service
 
 
 def _bulk_upload_to_response(bu) -> BulkUploadResponse:

@@ -25,6 +25,7 @@ export const MediaAPI = {
   updateTranscript: (id: string, transcript: string) => api.post(`/media/${id}/transcript`, null, { params: { transcript } }).then(res => res.data),
   updateMetadata: (id: string, metadata: any) => api.put(`/media/${id}/metadata`, metadata).then(res => res.data),
   updateAudio: (id: string, audio_path: string, duration?: number) => api.post(`/media/${id}/audio`, null, { params: { audio_path, duration } }).then(res => res.data),
+  streamUrl: (id: string) => `/api/v1/media/${id}/stream`,
 };
 
 export const JobsAPI = {

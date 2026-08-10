@@ -443,3 +443,34 @@ async def upload_media_file(
     full_path = file_storage._get_full_path(saved_path)
     return {"path": str(full_path)}
 
+
+@router.get("/{media_id}/stream")
+async def stream_media(
+    media_id: str,
+    request: Request,
+    media_repo=Depends(get_media_repo)
+):
+    """Stream audio/video file for a media item."""
+    from fastapi.responses import FileResponse
+    media = await media_repo.get(media_id)
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+        
+    if not media.audio_path:
+        raise HTTPException(status_code=404, detail="Media has no audio/video file attached")
+        
+    file_storage = request.app.state.container.file_storage
+    try:
+        full_path = file_storage._get_full_path(media.audio_path)
+    except AttributeError:
+        # Fallback if _get_full_path is not available or it's not local storage
+        raise HTTPException(status_code=501, detail="Streaming not supported for this storage backend")
+        
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+        
+    return FileResponse(
+        path=full_path, 
+        media_type="audio/mpeg", 
+        headers={"Accept-Ranges": "bytes"}
+    )
