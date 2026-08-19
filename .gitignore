@@ -141,3 +141,5 @@ node/
 scratch
 ragpipe.*
 .gitignore
+
+tests/
