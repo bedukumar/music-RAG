@@ -226,7 +226,7 @@
    ============================================================ */
 .chat-main {
   flex: 1;
-  min-height: 0; /* Crucial: prevents flex child from overflowing */
+  min-height: 0; /*Crucial: prevents flex child from overflowing */
   background-color: var(--bg-app);
   display: flex;
   flex-direction: column;
@@ -256,80 +256,224 @@
 }
 
 /* ============================================================
-   AURORA ANIMATION
+   AURORA ANIMATION SYSTEM (DEEP POLAR SKY WITH CRISP PIN-POINT STARS)
    ============================================================ */
-.chat-layout::before,
-.chat-layout::after {
-  content: '';
+.aurora-container {
   position: absolute;
-  top: 0;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+  contain: strict;
+  /* Slightly darker deep midnight blue sky gradient */
+  background: radial-gradient(ellipse at 50% 15%, #050d24 0%, #030818 35%, #01040f 70%, #000105 100%);
+}
+
+/* ------------------------------------------------------------
+   PIN-SHARP DENSE STARFIELD
+   ------------------------------------------------------------ */
+.aurora-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Layer 1: Dense Pin-Point Stardust (Hard 1px stops, high frequency tiling = thousands of sharp stars) */
+.aurora-stars-far {
+  background-image: 
+    radial-gradient(1px 1px at 10px 15px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 35px 65px, #bae6fd 0px, #bae6fd 1px, transparent 1px),
+    radial-gradient(1px 1px at 75px 25px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 110px 85px, #e0f2fe 0px, #e0f2fe 1px, transparent 1px),
+    radial-gradient(1px 1px at 145px 40px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 180px 115px, #bae6fd 0px, #bae6fd 1px, transparent 1px),
+    radial-gradient(1px 1px at 215px 55px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 250px 95px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 285px 20px, #bae6fd 0px, #bae6fd 1px, transparent 1px),
+    radial-gradient(1px 1px at 320px 75px, #ffffff 0px, #ffffff 1px, transparent 1px),
+    radial-gradient(1px 1px at 355px 130px, #e0f2fe 0px, #e0f2fe 1px, transparent 1px),
+    radial-gradient(1px 1px at 390px 45px, #ffffff 0px, #ffffff 1px, transparent 1px);
+  background-size: 140px 100px, 210px 160px, 310px 240px;
+  opacity: 0.8;
+  animation: starTwinkleSlow 6s ease-in-out infinite alternate;
+}
+
+/* Layer 2: Medium Pin-Sharp Stars (1.5px hard stops) */
+.aurora-stars-mid {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 22px 42px, #ffffff 0px, #ffffff 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 85px 110px, #bae6fd 0px, #bae6fd 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 155px 175px, #ffffff 0px, #ffffff 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 235px 68px, #e0f2fe 0px, #e0f2fe 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 295px 150px, #ffffff 0px, #ffffff 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 365px 32px, #c4b5fd 0px, #c4b5fd 1px, transparent 1.5px),
+    radial-gradient(1.5px 1.5px at 435px 190px, #ffffff 0px, #ffffff 1px, transparent 1.5px);
+  background-size: 190px 140px, 330px 270px;
+  opacity: 0.85;
+  animation: starTwinkleFast 3.5s ease-in-out infinite alternate;
+}
+
+/* Layer 3: Polaris / Constellation Sharp Accent Stars */
+.aurora-stars-bright {
+  background-image:
+    radial-gradient(2px 2px at 14% 16%, #ffffff 0px, #ffffff 1px, transparent 2px),
+    radial-gradient(2px 2px at 41% 10%, #ffffff 0px, #ffffff 1px, transparent 2px),
+    radial-gradient(2px 2px at 76% 20%, #ffffff 0px, #ffffff 1px, transparent 2px),
+    radial-gradient(2.5px 2.5px at 87% 7%, #ffffff 0px, #ffffff 1.5px, transparent 2.5px),
+    radial-gradient(2px 2px at 60% 32%, #ffffff 0px, #ffffff 1px, transparent 2px),
+    radial-gradient(2px 2px at 26% 38%, #ffffff 0px, #ffffff 1px, transparent 2px);
+  opacity: 0.9;
+  animation: starGlowPulse 4s ease-in-out infinite alternate;
+}
+
+.aurora-curtain {
+  position: absolute;
+  top: -15%;
   left: -100%;
   width: 300%;
-  height: 100%;
-  z-index: 0;
+  height: 120%;
   pointer-events: none;
   transform-origin: top center;
   will-change: transform;
 }
 
-/* Primary Aurora Curtain */
-.chat-layout::before {
+/* Layer 1: Primary Emerald & Cyan Polar Curtain (Distant Horizon Scale) */
+.aurora-primary {
   background: linear-gradient(
     90deg,
-    rgba(13, 148, 136, 0) 0%, 
-    rgba(16, 185, 129, 0.8) 15%, /* Emerald */
-    rgba(13, 148, 136, 0.9) 25%, /* Teal */
-    rgba(6, 182, 212, 0.6) 35%,  /* Cyan */
-    rgba(13, 148, 136, 0) 45%,
-    rgba(13, 148, 136, 0) 55%,
-    rgba(139, 92, 246, 0.8) 65%, /* Violet */
-    rgba(16, 185, 129, 0.6) 75%, /* Emerald */
-    rgba(13, 148, 136, 0.9) 85%, /* Teal */
-    rgba(13, 148, 136, 0) 100%
+    transparent 0%, 
+    rgba(16, 185, 129, 0.85) 10%,  /* Atomic Oxygen Green */
+    rgba(0, 180, 216, 0.75) 18%,   /* Polar Cyan */
+    rgba(13, 148, 136, 0.85) 25%,  /* Deep Arctic Teal */
+    transparent 38%,
+    transparent 48%,
+    rgba(139, 92, 246, 0.75) 58%,  /* High-Altitude Violet */
+    rgba(16, 185, 129, 0.85) 68%,  /* Oxygen Emerald Green */
+    rgba(0, 180, 216, 0.7) 78%,    /* Polar Cyan */
+    transparent 100%
   );
-  background-size: 33.333% 100%; /* Repeats 3 times perfectly */
-  filter: blur(40px);
-  opacity: 0.85;
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-  animation: aurora-pan-1 30s linear infinite;
+  background-size: 25% 100%;
+  filter: blur(10px);
+  opacity: 0.75;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0) 85%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0) 85%);
+  animation: aurora-pan-1 35s linear infinite;
 }
 
-/* Secondary Aurora Curtain */
-.chat-layout::after {
+/* Layer 2: Secondary Violet & Deep Emerald Curtain */
+.aurora-secondary {
   background: linear-gradient(
     90deg,
-    rgba(13, 148, 136, 0) 0%,
-    rgba(6, 182, 212, 0.8) 20%,  /* Cyan */
-    rgba(13, 148, 136, 0.6) 30%, /* Teal */
-    rgba(13, 148, 136, 0) 45%,
-    rgba(139, 92, 246, 0.6) 60%, /* Violet */
-    rgba(16, 185, 129, 0.8) 80%, /* Emerald */
-    rgba(13, 148, 136, 0) 100%
+    transparent 0%,
+    rgba(6, 182, 212, 0.75) 12%,  /* Cyan */
+    rgba(147, 51, 234, 0.7) 22%,   /* Royal Violet */
+    rgba(16, 185, 129, 0.75) 32%,  /* Emerald */
+    transparent 42%,
+    rgba(59, 130, 246, 0.7) 54%,   /* Cobalt */
+    rgba(16, 185, 129, 0.8) 66%,   /* Emerald */
+    transparent 100%
   );
-  background-size: 33.333% 100%;
-  filter: blur(50px);
-  opacity: 0.7;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 10%, black 40%, transparent 90%);
-  mask-image: linear-gradient(to bottom, transparent 10%, black 40%, transparent 90%);
-  animation: aurora-pan-2 45s linear infinite reverse;
+  background-size: 25% 100%;
+  filter: blur(14px);
+  opacity: 0.65;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 5%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0) 80%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 5%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0) 80%);
+  animation: aurora-pan-2 48s linear infinite reverse;
+}
+
+/* Layer 3: Finer Distant Vertical Light Ray Pillars */
+.aurora-rays {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(52, 211, 153, 0.5) 1.2%,  /* Vivid Emerald Ray Core */
+    rgba(6, 182, 212, 0.45) 2.0%,
+    rgba(16, 185, 129, 0.4) 3.2%,
+    transparent 4.5%,
+    transparent 9%,
+    rgba(167, 139, 250, 0.45) 10.2%, /* Violet Ray Core */
+    rgba(52, 211, 153, 0.4) 11.5%,
+    transparent 14%
+  );
+  background-size: 25% 100%;
+  filter: blur(6px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0) 80%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0) 80%);
+  animation: aurora-pan-3 40s linear infinite;
+}
+
+/* Layer 4: Upper Atmospheric Glow Fringe */
+.aurora-specular {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(16, 185, 129, 0.65) 12%,
+    rgba(147, 51, 234, 0.6) 18%,
+    transparent 28%,
+    transparent 50%,
+    rgba(52, 211, 153, 0.65) 60%,
+    rgba(6, 182, 212, 0.6) 68%,
+    transparent 78%
+  );
+  background-size: 25% 100%;
+  filter: blur(8px);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 30%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 30%);
+  animation: aurora-pan-1 35s linear infinite;
+}
+
+/* Subtle Polar Night Stardust / Grain Texture */
+.aurora-noise-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 32px 32px;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+@keyframes starTwinkleSlow {
+  0% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.45; }
+}
+
+@keyframes starTwinkleFast {
+  0% { opacity: 0.3; }
+  33% { opacity: 0.9; }
+  66% { opacity: 0.4; }
+  100% { opacity: 0.85; }
+}
+
+@keyframes starGlowPulse {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 @keyframes aurora-pan-1 {
-  0% { transform: perspective(800px) rotateX(60deg) skewX(-20deg) translateX(0); }
-  100% { transform: perspective(800px) rotateX(60deg) skewX(-20deg) translateX(33.333%); }
+  0% { transform: perspective(1600px) rotateX(42deg) skewX(-14deg) scale(0.7) translateX(0); }
+  100% { transform: perspective(1600px) rotateX(42deg) skewX(-14deg) scale(0.7) translateX(25%); }
 }
 
 @keyframes aurora-pan-2 {
-  0% { transform: perspective(800px) rotateX(50deg) skewX(-10deg) translateX(0); }
-  100% { transform: perspective(800px) rotateX(50deg) skewX(-10deg) translateX(33.333%); }
+  0% { transform: perspective(1600px) rotateX(36deg) skewX(-8deg) scale(0.68) translateX(0); }
+  100% { transform: perspective(1600px) rotateX(36deg) skewX(-8deg) scale(0.68) translateX(25%); }
 }
 
-/* Make main content act as glass window ONLY when empty */
+@keyframes aurora-pan-3 {
+  0% { transform: perspective(1600px) rotateX(44deg) skewX(-16deg) scale(0.72) translateX(0); }
+  100% { transform: perspective(1600px) rotateX(44deg) skewX(-16deg) scale(0.72) translateX(25%); }
+}
+
+/* Make main content act as subtle glass window ONLY when empty */
 .chat-layout.chat-layout-empty .chat-main {
-  background-color: rgba(8, 8, 8, 0.25);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(2, 4, 8, 0.35);
 }
 
 .empty-state {

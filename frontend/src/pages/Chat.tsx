@@ -72,6 +72,16 @@ const Chat: React.FC = () => {
 
   return (
     <div className={`chat-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!activeConversationId ? 'chat-layout-empty' : ''}`}>
+      <div className="aurora-container" aria-hidden="true">
+        <div className="aurora-stars aurora-stars-far" />
+        <div className="aurora-stars aurora-stars-mid" />
+        <div className="aurora-stars aurora-stars-bright" />
+        <div className="aurora-curtain aurora-primary" />
+        <div className="aurora-curtain aurora-secondary" />
+        <div className="aurora-curtain aurora-rays" />
+        <div className="aurora-curtain aurora-specular" />
+        <div className="aurora-noise-overlay" />
+      </div>
       <ChatSidebar
         conversations={conversations}
         activeId={activeConversationId}
