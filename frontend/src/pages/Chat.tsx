@@ -13,7 +13,7 @@ interface ConversationInfo {
 const Chat: React.FC = () => {
   const [conversations, setConversations] = useState<ConversationInfo[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load conversations from local storage
   useEffect(() => {
