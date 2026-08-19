@@ -69,7 +69,7 @@ class AudioPipeline(BasePipeline):
             
             try:
                 # Use httpx to download the file from the source_url
-                async with httpx.AsyncClient(follow_redirects=True) as client:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=httpx.Timeout(60.0, connect=10.0)) as client:
                     response = await client.get(media.source_url)
                     response.raise_for_status()
                     

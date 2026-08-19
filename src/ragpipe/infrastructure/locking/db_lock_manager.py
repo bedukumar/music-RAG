@@ -75,7 +75,7 @@ class DatabaseLockManager(LockManager):
                 LockORM.owner_id == owner_id,
             )
         )
-        await self._session.flush()
+        await self._session.commit()
         return result.rowcount > 0
 
     async def force_release(self, resource_id: str) -> bool:
@@ -92,7 +92,7 @@ class DatabaseLockManager(LockManager):
                 LockORM.resource_id == resource_id,
             )
         )
-        await self._session.flush()
+        await self._session.commit()
         return result.rowcount > 0
 
     async def is_locked(self, resource_id: str) -> bool:

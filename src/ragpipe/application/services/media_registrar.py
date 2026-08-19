@@ -63,7 +63,7 @@ class MediaRegistrar:
             has_transcript = True
             transcript_data_available = True
             
-        has_metadata = bool(media.metadata_fields)
+        has_metadata = bool(media.metadata_fields) or bool(media.artist) or bool(media.album) or bool(media.genre) or bool(media.tags) or bool(media.language)
         metadata_data_available = has_metadata
 
         statuses = [
@@ -101,7 +101,7 @@ class MediaRegistrar:
                 elif hasattr(media, "lyrics") and media.lyrics:
                     has_transcript = True
                     transcript_data_available = True
-                has_metadata = bool(media.metadata_fields)
+                has_metadata = bool(media.metadata_fields) or bool(media.artist) or bool(media.album) or bool(media.genre) or bool(media.tags) or bool(media.language)
                 metadata_data_available = has_metadata
                 statuses.extend([
                     ModalityStatus(media.id, Modality.AUDIO, audio_data_available, "pending" if has_audio else "skipped", None, None, None),

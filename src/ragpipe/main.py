@@ -88,4 +88,11 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("ragpipe.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "ragpipe.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        reload_dirs=["src"],
+        reload_excludes=["*.db*", "data/*", "scratch/*", "graphify-out/*"],
+    )

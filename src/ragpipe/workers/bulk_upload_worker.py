@@ -9,6 +9,7 @@ methods are ``async``.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 from typing import AsyncIterator, Dict, List
@@ -214,6 +215,14 @@ class BulkUploadWorker:
                     pass
                 else:
                     raise
+
+            # Dispatch pipelines for the newly created media
+            try:
+                jobs = await self._orchestrator.process_media(media_id)
+                for job in jobs:
+                    asyncio.create_task(self._orchestrator.execute_job(job))
+            except Exception:
+                pass  # Pipeline dispatch failure shouldn't fail the row
 
         await self._queue.change_visibility(msg.receipt_handle, 30)
 

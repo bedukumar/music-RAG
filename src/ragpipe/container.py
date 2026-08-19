@@ -144,8 +144,28 @@ class Container:
 
     async def init_resources(self):
         """Initialize async resources like DB engine."""
-        self.engine = create_async_engine(self.db_url, echo=False)
-        
+        is_sqlite = "sqlite" in self.db_url
+        engine_kwargs: dict = {"echo": False}
+        if is_sqlite:
+            from sqlalchemy.pool import NullPool
+            engine_kwargs["poolclass"] = NullPool
+            engine_kwargs["connect_args"] = {
+                "check_same_thread": False,
+                "timeout": 60.0,
+            }
+
+        self.engine = create_async_engine(self.db_url, **engine_kwargs)
+
+        if is_sqlite:
+            from sqlalchemy import event
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=30000")
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
         # Create tables
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -169,8 +189,10 @@ class Container:
         self.lock_manager = DatabaseLockManager(self._shared_session)
         self.conversation_repository = SQLAlchemyConversationRepository(self._shared_session)
         
-        # Initialize Mock Qdrant collections so ingestion pipelines don't fail
+        # Initialize Qdrant collections and active EmbeddingVersion records in DB
         import uuid
+        from datetime import datetime, timezone
+        from ragpipe.domain.models.embedding import EmbeddingVersion
         for mod in Modality:
             dummy_id = str(uuid.uuid5(uuid.NAMESPACE_OID, mod.value))
             coll_name = f"{mod.value}_{dummy_id}"
@@ -180,6 +202,21 @@ class Container:
             except Exception as e:
                 import logging
                 logging.warning(f"Failed to create collection {coll_name}: {e}")
+            
+            # Save default active embedding version to DB
+            v = EmbeddingVersion(
+                id=dummy_id,
+                modality=mod,
+                model_name="CLAP" if mod == Modality.AUDIO else "SentenceTransformer",
+                model_version="1.0",
+                dimension=dim,
+                chunking_strategy="default",
+                chunking_version="1.0",
+                pipeline_version="1.0",
+                is_active=True,
+                created_at=datetime.now(timezone.utc),
+            )
+            await self.state_store.save_embedding_version(v)
         # Initialize Services
         self.media_registrar = MediaRegistrar(
             self.media_repository, self.state_store, self.event_bus, self.metrics

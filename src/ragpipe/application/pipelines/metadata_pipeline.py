@@ -55,11 +55,19 @@ class MetadataPipeline(BasePipeline):
         if not media:
             raise InvalidMediaError("Media not found")
             
-        if not media.metadata_fields:
+        # Check both metadata_fields dict AND core structured fields
+        has_any_metadata = (
+            bool(media.metadata_fields)
+            or bool(media.artist)
+            or bool(media.album)
+            or bool(media.genre)
+            or bool(media.tags)
+        )
+        if not has_any_metadata:
             raise InvalidMediaError("Media has no metadata fields")
             
         context["media"] = media
-        context["metadata_dict"] = media.metadata_fields.copy()
+        context["metadata_dict"] = (media.metadata_fields or {}).copy()
         
         # Merge basic fields into metadata dict for embedding
         context["metadata_dict"]["title"] = media.title

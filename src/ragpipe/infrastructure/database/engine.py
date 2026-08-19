@@ -85,8 +85,11 @@ class DatabaseEngine:
         if is_sqlite:
             # SQLite doesn't support connection pooling well
             engine_kwargs["poolclass"] = NullPool
-            # Required for SQLite async
-            engine_kwargs["connect_args"] = {"check_same_thread": False}
+            # Required for SQLite async with high timeout
+            engine_kwargs["connect_args"] = {
+                "check_same_thread": False,
+                "timeout": 60.0,
+            }
         else:
             engine_kwargs["poolclass"] = QueuePool
             engine_kwargs["pool_size"] = self._settings.database.db_pool_size
@@ -101,6 +104,8 @@ class DatabaseEngine:
             @event.listens_for(self._engine.sync_engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=30000")
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 

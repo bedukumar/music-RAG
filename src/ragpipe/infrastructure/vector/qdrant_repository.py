@@ -101,6 +101,12 @@ class QdrantVectorRepository(VectorRepository):
         ]
 
         def sync_upsert():
+            if not self._client.collection_exists(collection):
+                dim = len(vectors[0][1]) if vectors else 384
+                self._client.create_collection(
+                    collection_name=collection,
+                    vectors_config=models.VectorParams(size=dim, distance=models.Distance.COSINE),
+                )
             self._client.upsert(
                 collection_name=collection,
                 points=points,

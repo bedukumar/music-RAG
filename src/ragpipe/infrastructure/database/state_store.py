@@ -402,7 +402,7 @@ class SQLAlchemyStateStore(StateStore):
             is_active=version.is_active,
             created_at=version.created_at,
         )
-        self._session.add(orm)
+        await self._session.merge(orm)
         await self._session.commit()
 
     async def get_active_embedding_version(self, modality: Modality) -> Optional[EmbeddingVersion]:
