@@ -205,7 +205,7 @@ export default function MediaDetails() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b mb-6" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+      <div className="flex border-b mb-6" style={{ borderColor: 'var(--border-1)' }}>
         {['audio', 'transcript', 'metadata', 'processing'].map((tab) => (
           <button
             key={tab}
@@ -240,7 +240,7 @@ export default function MediaDetails() {
                 </div>
               </div>
             ) : (
-              <div className="text-center p-12 glass-card" style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <div className="text-center p-12 glass-card" style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-2)' }}>
                 <p className="text-muted mb-4">No audio available for this media item.</p>
                 <button className="btn btn-primary mx-auto" onClick={() => handleOpenModal('audio', false)}>
                    <Upload size={16}/> Upload Audio
@@ -263,16 +263,16 @@ export default function MediaDetails() {
             </div>
             
             {hasModality('transcript') && media.transcript_text ? (
-              <div className="glass-card" style={{ background: '#121216', padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
+              <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
                 <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                   {media.transcript_text}
                 </p>
-                <div className="text-muted text-small mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+                <div className="text-muted text-small mt-6 pt-4" style={{ borderTop: '1px solid var(--border-1)', textAlign: 'right' }}>
                   Word count: {media.transcript_text.split(/\s+/).filter((w: string) => w.length > 0).length}
                 </div>
               </div>
             ) : (
-              <div className="text-center p-12 glass-card" style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <div className="text-center p-12 glass-card" style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-2)' }}>
                 <p className="text-muted mb-4">No transcript available for this media item.</p>
                 <button className="btn btn-primary mx-auto" onClick={() => handleOpenModal('transcript', false)}>
                    <Upload size={16}/> Add Transcript
@@ -289,27 +289,27 @@ export default function MediaDetails() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-4">
-                <div className="glass-card" style={{ background: '#121216', padding: '1.5rem' }}>
+                <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem' }}>
                   <h3 className="text-small mb-4 text-muted" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Core Information</h3>
                   <table className="w-full text-small">
                     <tbody>
-                      <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
                         <td className="py-2 text-muted">Title</td>
                         <td className="py-2 text-right">{media.title || '-'}</td>
                       </tr>
-                      <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
                         <td className="py-2 text-muted">Artist / Creator</td>
                         <td className="py-2 text-right">{media.artist || '-'}</td>
                       </tr>
-                      <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
                         <td className="py-2 text-muted">Album / Show</td>
                         <td className="py-2 text-right">{media.album || media.show_name || '-'}</td>
                       </tr>
-                      <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
                         <td className="py-2 text-muted">Genre</td>
                         <td className="py-2 text-right">{media.genre || '-'}</td>
                       </tr>
-                      <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
                         <td className="py-2 text-muted">Language</td>
                         <td className="py-2 text-right">{media.language || '-'}</td>
                       </tr>
@@ -323,14 +323,14 @@ export default function MediaDetails() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="glass-card" style={{ background: '#121216', padding: '1.5rem' }}>
+                <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem' }}>
                   <h3 className="text-small mb-4 text-muted" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Additional Fields (JSON)</h3>
                   {media.metadata_fields && Object.keys(media.metadata_fields).length > 0 ? (
-                    <pre style={{ margin: 0, padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)', overflowX: 'auto' }}>
+                    <pre style={{ margin: 0, padding: '1rem', background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)', overflowX: 'auto' }}>
                       {JSON.stringify(media.metadata_fields, null, 2)}
                     </pre>
                   ) : (
-                    <div className="text-muted text-small p-4 text-center" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                    <div className="text-muted text-small p-4 text-center" style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius-sm)' }}>
                       No additional metadata fields.
                     </div>
                   )}
@@ -363,8 +363,8 @@ export default function MediaDetails() {
                    const isUp = isProcessing[`${mod}-upload`];
                    
                    return (
-                     <div key={mod} className="glass-card flex flex-col gap-3" style={{ background: '#121216', padding: '1.5rem', border: `1px solid ${isAvailable ? 'rgba(255,255,255,0.1)' : 'rgba(239, 68, 68, 0.2)'}` }}>
-                        <div className="flex justify-between items-center pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                     <div key={mod} className="glass-card flex flex-col gap-3" style={{ background: 'var(--bg-1)', padding: '1.5rem', border: `1px solid ${isAvailable ? 'var(--border-1)' : 'rgba(239, 68, 68, 0.25)'}` }}>
+                        <div className="flex justify-between items-center pb-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
                            <div className="flex items-center gap-2">
                               <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{mod}</div>
                               <span className={`badge badge-${isAvailable ? 'success' : 'danger'}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
@@ -399,7 +399,7 @@ export default function MediaDetails() {
                         
                         {pState ? (
                            <div className="flex flex-col gap-3 mt-2">
-                              <div className="flex justify-between text-small" style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '4px' }}>
+                              <div className="flex justify-between text-small" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', padding: '0.5rem', borderRadius: '4px' }}>
                                  <span className="text-muted">Status</span>
                                  <span className={`badge badge-${pState.overall_status === 'completed' ? 'success' : pState.overall_status === 'failed' ? 'danger' : 'info'}`}>
                                     {pState.overall_status}
@@ -407,7 +407,7 @@ export default function MediaDetails() {
                               </div>
                               <div className="flex flex-col gap-2">
                                  {pState.stages?.map((stage: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center text-small p-2 rounded" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.02)' }}>
+                                    <div key={idx} className="flex justify-between items-center text-small p-2 rounded" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
                                        <span style={{ color: 'var(--text-secondary)' }}>{stage.stage}</span>
                                        <div className="flex items-center gap-2">
                                           {stage.duration_ms && <span className="text-muted" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{Math.round(stage.duration_ms)}ms</span>}
@@ -418,7 +418,7 @@ export default function MediaDetails() {
                               </div>
                            </div>
                         ) : (
-                           <div className="text-small text-muted p-6 text-center mt-2" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                           <div className="text-small text-muted p-6 text-center mt-2" style={{ background: 'var(--bg-2)', borderRadius: '4px', border: '1px dashed var(--border-2)' }}>
                               No pipeline history.
                            </div>
                         )}
@@ -432,8 +432,8 @@ export default function MediaDetails() {
       </div>
       
       {isModalOpen && createPortal(
-        <div className="modal-overlay animate-fade-in" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '4rem 1rem', zIndex: 9999 }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '480px', position: 'relative', margin: 'auto', background: '#121216', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
+        <div className="modal-overlay animate-fade-in">
+          <div className="glass-card" style={{ width: '100%', maxWidth: '480px', position: 'relative', margin: 'auto', background: 'var(--bg-1)', border: '1px solid var(--border-2)', boxShadow: 'var(--shadow-3)' }}>
             <button 
               onClick={handleCloseModal} 
               className="btn-icon" 
@@ -452,7 +452,7 @@ export default function MediaDetails() {
               {activeModality === 'audio' && (
                 <div className="input-group">
                   <label className="input-label">Audio/Video File</label>
-                  <div className="flex items-center gap-3" style={{ background: '#1a1a24', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                  <div className="flex items-center gap-3" style={{ background: 'var(--bg-2)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-2)' }}>
                     <input required type="file" accept="audio/*,video/*" className="text-small" style={{ width: '100%', color: 'var(--text-primary)' }} onChange={e => setSelectedFile(e.target.files?.[0] || null)} />
                   </div>
                 </div>
@@ -461,14 +461,14 @@ export default function MediaDetails() {
               {activeModality === 'transcript' && (
                 <div className="input-group">
                   <label className="input-label">Transcript Text / Lyrics</label>
-                  <textarea required className="input-field" placeholder="Paste transcript here..." style={{ minHeight: '150px', background: '#1a1a24' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
+                  <textarea required className="input-field" placeholder="Paste transcript here..." style={{ minHeight: '150px' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
                 </div>
               )}
 
               {activeModality === 'metadata' && (
                 <div className="input-group">
                   <label className="input-label">Metadata (JSON format)</label>
-                  <textarea required className="input-field" placeholder='{"artist": "Queen", "year": 1975}' style={{ minHeight: '150px', fontFamily: 'monospace', fontSize: '0.85rem', background: '#1a1a24' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
+                  <textarea required className="input-field" placeholder='{"artist": "Queen", "year": 1975}' style={{ minHeight: '150px', fontFamily: 'monospace', fontSize: '0.85rem' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
                 </div>
               )}
               
