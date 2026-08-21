@@ -292,13 +292,15 @@ export default function MediaDetails() {
                 <h2 className="md-section-title">Audio Playback</h2>
               </div>
               <div className="md-section-actions">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => handleOpenModal('audio', hasModality('audio'))}
-                  aria-label={hasModality('audio') ? 'Replace audio file' : 'Upload audio file'}
-                >
-                  {hasModality('audio') ? <><Edit size={13} /> Replace</> : <><Upload size={13} /> Upload</>}
-                </button>
+                {hasModality('audio') && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleOpenModal('audio', true)}
+                    aria-label="Replace audio file"
+                  >
+                    <Edit size={13} /> Replace
+                  </button>
+                )}
               </div>
             </div>
 
@@ -354,21 +356,23 @@ export default function MediaDetails() {
               </div>
               <div className="md-section-actions">
                 {hasModality('transcript') && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleCopyTranscript}
-                    aria-label="Copy transcript to clipboard"
-                  >
-                    <Copy size={13} /> Copy
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleCopyTranscript}
+                      aria-label="Copy transcript to clipboard"
+                    >
+                      <Copy size={13} /> Copy
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleOpenModal('transcript', true)}
+                      aria-label="Edit transcript"
+                    >
+                      <Edit size={13} /> Edit
+                    </button>
+                  </>
                 )}
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => handleOpenModal('transcript', hasModality('transcript'))}
-                  aria-label={hasModality('transcript') ? 'Edit transcript' : 'Upload transcript'}
-                >
-                  {hasModality('transcript') ? <><Edit size={13} /> Edit</> : <><Upload size={13} /> Upload</>}
-                </button>
               </div>
             </div>
 

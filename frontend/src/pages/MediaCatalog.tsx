@@ -8,13 +8,19 @@ export default function MediaCatalog() {
   const [media, setMedia] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ title: '', metadataJson: '', transcript: '' });
+  const [uploadForm, setUploadForm] = useState({ title: '', artist: '', metadataJson: '', transcript: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Delete modal state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => { loadMedia(); }, []);
 
@@ -40,7 +46,7 @@ export default function MediaCatalog() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setUploadForm({ title: '', metadataJson: '', transcript: '' });
+    setUploadForm({ title: '', artist: '', metadataJson: '', transcript: '' });
     setSelectedFile(null);
   };
 
@@ -50,6 +56,7 @@ export default function MediaCatalog() {
     try {
       setIsUploading(true);
       if (uploadForm.title.length > 500) { alert('Title too long (max 500 chars).'); return; }
+      if (uploadForm.artist && uploadForm.artist.length > 255) { alert('Artist name too long (max 255 chars).'); return; }
       if (uploadForm.transcript && uploadForm.transcript.length > 100000) { alert('Transcript too long (max 100k chars).'); return; }
 
       let parsedMetadata = {};
@@ -77,6 +84,7 @@ export default function MediaCatalog() {
       const createRes = await MediaAPI.create({
         media_type: 'song',
         title: uploadForm.title,
+        artist: uploadForm.artist || undefined,
         transcript_text: uploadForm.transcript || undefined,
         metadata_fields: parsedMetadata,
         audio_path: uploadRes.path,
@@ -136,6 +144,17 @@ export default function MediaCatalog() {
                     placeholder="e.g. Bohemian Rhapsody"
                     value={uploadForm.title}
                     onChange={e => setUploadForm({ ...uploadForm, title: e.target.value })}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Artist / Creator</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="e.g. Queen"
+                    value={uploadForm.artist}
+                    onChange={e => setUploadForm({ ...uploadForm, artist: e.target.value })}
                   />
                 </div>
 
@@ -249,7 +268,7 @@ export default function MediaCatalog() {
                       </span>
                     </td>
                     <td style={{ color: 'var(--text-2)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-                      {item.duration ? `${Math.round(item.duration)}s` : '—'}
+                      {item.duration ? formatDuration(item.duration) : '—'}
                     </td>
                     <td style={{ color: 'var(--text-2)', fontSize: 12 }}>
                       {new Date(item.created_at).toLocaleDateString()}
