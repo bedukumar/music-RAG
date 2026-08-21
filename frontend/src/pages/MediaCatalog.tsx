@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { MediaAPI } from '../api/client';
-import { Play, Upload, Trash2, X, BarChart2 } from 'lucide-react';
+import { Music, Upload, Trash2, X, BarChart2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function MediaCatalog() {
   const [media, setMedia] = useState<any[]>([]);
@@ -11,20 +11,30 @@ export default function MediaCatalog() {
   const [uploadForm, setUploadForm] = useState({ title: '', metadataJson: '', transcript: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   useEffect(() => { loadMedia(); }, []);
 
   const loadMedia = () => {
     MediaAPI.list({ limit: 50 }).then(res => setMedia(res.items || [])).catch(console.error);
   };
 
-  const handleDeleteMedia = async (id: string) => {
-    if (!window.confirm('Delete this media item?')) return;
+  const confirmDeleteMedia = async () => {
+    if (!deleteTarget) return;
     try {
-      await MediaAPI.delete(id);
+      setIsDeleting(true);
+      setDeleteError(null);
+      await MediaAPI.delete(deleteTarget.id);
       await loadMedia();
-    } catch (e) {
-      console.error(e);
-      alert('Failed to delete. It may be locked by a processing job.');
+      setDeleteTarget(null);
+    } catch (e: any) {
+      console.error('Failed to delete media', e);
+      setDeleteError('Failed to delete. It may be locked by an active processing job.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -208,13 +218,23 @@ export default function MediaCatalog() {
                   <tr>
                     <td>
                       <div className="flex items-center gap-3">
-                        <button
-                          className="btn-icon"
-                          style={{ width: 26, height: 26, flexShrink: 0 }}
-                          title="Play"
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            flexShrink: 0,
+                            borderRadius: 'var(--r-2)',
+                            background: 'var(--accent-bg)',
+                            border: '1px solid var(--accent-border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--accent)',
+                          }}
+                          title="Music file"
                         >
-                          <Play size={11} />
-                        </button>
+                          <Music size={13} />
+                        </div>
                         <div>
                           <div style={{ fontWeight: 500, fontSize: 13 }}>{item.title}</div>
                           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>
@@ -254,7 +274,7 @@ export default function MediaCatalog() {
                         <button
                           className="btn btn-danger"
                           style={{ height: 26, width: 26, padding: 0 }}
-                          onClick={() => handleDeleteMedia(item.id)}
+                          onClick={() => { setDeleteTarget({ id: item.id, title: item.title }); setDeleteError(null); }}
                           title="Delete"
                         >
                           <Trash2 size={12} />
@@ -275,6 +295,91 @@ export default function MediaCatalog() {
           </tbody>
         </table>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && createPortal(
+        <div
+          className="modal-overlay animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget && !isDeleting) setDeleteTarget(null); }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+        >
+          <div className="modal" style={{ maxWidth: 420, padding: 24, position: 'relative' }}>
+            <button
+              className="btn-icon"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+              aria-label="Close modal"
+              style={{ position: 'absolute', top: 16, right: 16 }}
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 'var(--r-2)',
+                  background: 'var(--danger-bg)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--danger)',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h2 id="delete-modal-title" className="heading-2" style={{ fontSize: 16, margin: 0 }}>
+                  Delete Media File
+                </h2>
+                <span className="text-muted" style={{ fontSize: 12 }}>
+                  This action cannot be undone
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 20 }}>
+              Are you sure you want to delete <strong style={{ color: 'var(--text-1)' }}>"{deleteTarget.title}"</strong>? All associated audio data, transcripts, metadata, and pipeline embeddings will be permanently removed.
+            </p>
+
+            {deleteError && (
+              <div className="text-danger" style={{ fontSize: 12, padding: 10, background: 'var(--danger-bg)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--r-2)', marginBottom: 16 }}>
+                {deleteError}
+              </div>
+            )}
+
+            <div className="modal-footer" style={{ padding: 0, background: 'transparent', border: 'none', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={confirmDeleteMedia}
+                disabled={isDeleting}
+                style={{ background: 'var(--danger)', color: '#ffffff', border: 'none' }}
+              >
+                {isDeleting ? (
+                  <><RefreshCw size={13} className="animate-pulse" /> Deleting...</>
+                ) : (
+                  <><Trash2 size={13} /> Delete File</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
