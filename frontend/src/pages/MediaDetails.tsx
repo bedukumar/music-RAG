@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { MediaAPI, PipelineAPI } from '../api/client';
-import { Play, Upload, CheckCircle, Clock, X, RefreshCw, ArrowLeft, Edit, Copy, Info } from 'lucide-react';
+import { Play, Upload, CheckCircle, Clock, X, RefreshCw, ArrowLeft, Edit, Copy, Volume2, FileText, Database, Cpu } from 'lucide-react';
 
 export default function MediaDetails() {
   const { id } = useParams<{ id: string }>();
@@ -166,316 +166,533 @@ export default function MediaDetails() {
   }
   const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
 
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const formatMs = (ms: number) => {
+    if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
+    return `${Math.round(ms)}ms`;
+  };
+
+  // Pipeline summary stats
+  let totalStages = 0;
+  let completedStages = 0;
+  let failedStages = 0;
+  if (pipelineStats?.pipelines) {
+    Object.values(pipelineStats.pipelines).forEach((p: any) => {
+      p.stages?.forEach((s: any) => {
+        totalStages++;
+        if (s.status === 'completed') completedStages++;
+        if (s.status === 'failed') failedStages++;
+      });
+    });
+  }
+
   return (
-    <div className="animate-fade-in pb-12">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link to="/media" className="btn-icon" style={{ background: 'var(--bg-tertiary)' }}>
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="heading-1" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {media.title}
-          </h1>
-          <div className="text-muted text-small mt-1 flex gap-3 items-center">
+    <div className="md-page animate-fade-in">
+
+      {/* ── HEADER ── */}
+      <header className="md-header">
+        <div className="md-header-back">
+          <Link to="/media" className="btn-icon" aria-label="Back to media catalog">
+            <ArrowLeft size={15} />
+          </Link>
+        </div>
+
+        <div className="md-header-info">
+          <h1 className="md-title">{media.title}</h1>
+          <div className="md-subtitle">
             <span>{media.artist || 'Unknown Artist'}</span>
-            <span>•</span>
-            <span style={{ textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.7rem' }}>{media.media_type}</span>
-            {media.duration && (
+            {media.media_type && (
               <>
-                <span>•</span>
-                <span>{Math.floor(media.duration / 60)}:{String(Math.floor(media.duration % 60)).padStart(2, '0')}</span>
+                <span className="md-dot">·</span>
+                <span className="md-type-tag">{media.media_type}</span>
               </>
             )}
-            <span>•</span>
-            <span style={{ fontFamily: 'monospace', opacity: 0.6 }}>ID: {media.id.substring(0, 8)}...</span>
+            {media.duration && (
+              <>
+                <span className="md-dot">·</span>
+                <span>{formatDuration(media.duration)}</span>
+              </>
+            )}
           </div>
+          <div className="md-id">{media.id}</div>
         </div>
-      </div>
 
-      <div className="flex gap-2 mb-8">
+        <div className="md-header-actions">
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => handleReprocess()}
+            disabled={isProcessing['all']}
+            aria-label="Reprocess all available modalities"
+          >
+            <RefreshCw size={13} className={isProcessing['all'] ? 'animate-pulse' : ''} />
+            Reprocess All
+          </button>
+        </div>
+      </header>
+
+      {/* ── STATUS BADGES ── */}
+      <div className="md-badges">
         {['audio', 'transcript', 'metadata'].map(mod => {
           const isAvail = hasModality(mod);
           return (
-            <div key={mod} className={`badge badge-${isAvail ? 'success' : 'danger'}`} style={{ textTransform: 'capitalize', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}>
-              {mod}: {isAvail ? 'Available' : 'Missing'}
-            </div>
+            <span
+              key={mod}
+              className={`md-badge badge badge-${isAvail ? 'success' : 'danger'}`}
+              aria-label={`${mod} ${isAvail ? 'available' : 'missing'}`}
+            >
+              {mod.charAt(0).toUpperCase() + mod.slice(1)}: {isAvail ? 'Available' : 'Missing'}
+            </span>
           );
         })}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex border-b mb-6" style={{ borderColor: 'var(--border-1)' }}>
-        {['audio', 'transcript', 'metadata', 'processing'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`px-4 py-3 text-small transition-colors ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-primary'}`}
-            style={{ fontWeight: activeTab === tab ? 600 : 400, textTransform: 'capitalize', borderBottomColor: activeTab === tab ? 'var(--accent)' : 'transparent', borderBottomStyle: 'solid', borderBottomWidth: '2px', marginBottom: '-1px' }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="glass-panel" style={{ padding: '2rem', minHeight: '400px' }}>
-        
-        {/* AUDIO TAB */}
-        {activeTab === 'audio' && (
-          <div className="flex flex-col gap-6">
-            <h2 className="heading-2">Audio Playback</h2>
-            {hasModality('audio') ? (
-              <div className="flex flex-col gap-4">
-                <audio 
-                  controls 
-                  src={MediaAPI.streamUrl(media.id)} 
-                  style={{ width: '100%', outline: 'none', borderRadius: 'var(--radius-md)' }}
-                >
-                  Your browser does not support the audio element.
-                </audio>
-                <div className="text-small text-muted flex gap-2 items-center">
-                  <Info size={14} />
-                  <span>Audio file is successfully linked and available for playback.</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center p-12 glass-card" style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-2)' }}>
-                <p className="text-muted mb-4">No audio available for this media item.</p>
-                <button className="btn btn-primary mx-auto" onClick={() => handleOpenModal('audio', false)}>
-                   <Upload size={16}/> Upload Audio
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TRANSCRIPT TAB */}
-        {activeTab === 'transcript' && (
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <h2 className="heading-2" style={{ margin: 0 }}>Transcript</h2>
-              {hasModality('transcript') && (
-                <button className="btn btn-secondary btn-sm" onClick={handleCopyTranscript}>
-                  <Copy size={14} /> Copy Text
-                </button>
-              )}
-            </div>
-            
-            {hasModality('transcript') && media.transcript_text ? (
-              <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
-                <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                  {media.transcript_text}
-                </p>
-                <div className="text-muted text-small mt-6 pt-4" style={{ borderTop: '1px solid var(--border-1)', textAlign: 'right' }}>
-                  Word count: {media.transcript_text.split(/\s+/).filter((w: string) => w.length > 0).length}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center p-12 glass-card" style={{ background: 'var(--bg-2)', border: '1px dashed var(--border-2)' }}>
-                <p className="text-muted mb-4">No transcript available for this media item.</p>
-                <button className="btn btn-primary mx-auto" onClick={() => handleOpenModal('transcript', false)}>
-                   <Upload size={16}/> Add Transcript
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* METADATA TAB */}
-        {activeTab === 'metadata' && (
-          <div className="flex flex-col gap-6">
-            <h2 className="heading-2">Structured Metadata</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem' }}>
-                  <h3 className="text-small mb-4 text-muted" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Core Information</h3>
-                  <table className="w-full text-small">
-                    <tbody>
-                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
-                        <td className="py-2 text-muted">Title</td>
-                        <td className="py-2 text-right">{media.title || '-'}</td>
-                      </tr>
-                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
-                        <td className="py-2 text-muted">Artist / Creator</td>
-                        <td className="py-2 text-right">{media.artist || '-'}</td>
-                      </tr>
-                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
-                        <td className="py-2 text-muted">Album / Show</td>
-                        <td className="py-2 text-right">{media.album || media.show_name || '-'}</td>
-                      </tr>
-                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
-                        <td className="py-2 text-muted">Genre</td>
-                        <td className="py-2 text-right">{media.genre || '-'}</td>
-                      </tr>
-                      <tr className="border-b" style={{ borderColor: 'var(--border-1)' }}>
-                        <td className="py-2 text-muted">Language</td>
-                        <td className="py-2 text-right">{media.language || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-muted">Tags</td>
-                        <td className="py-2 text-right">{media.tags?.length ? media.tags.join(', ') : '-'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="glass-card" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', padding: '1.5rem' }}>
-                  <h3 className="text-small mb-4 text-muted" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Additional Fields (JSON)</h3>
-                  {media.metadata_fields && Object.keys(media.metadata_fields).length > 0 ? (
-                    <pre style={{ margin: 0, padding: '1rem', background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)', overflowX: 'auto' }}>
-                      {JSON.stringify(media.metadata_fields, null, 2)}
-                    </pre>
-                  ) : (
-                    <div className="text-muted text-small p-4 text-center" style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius-sm)' }}>
-                      No additional metadata fields.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* PROCESSING TAB */}
-        {activeTab === 'processing' && (
-          <div className="flex flex-col gap-6">
-             <div className="flex justify-between items-center mb-2">
-                <div>
-                   <h2 className="heading-2 mb-1" style={{ margin: 0 }}>Pipeline Processing</h2>
-                   <p className="text-muted text-small">Total execution time across all stages: <strong style={{ color: 'var(--text-primary)' }}>{totalDurationSeconds}s</strong></p>
-                </div>
-                <button className="btn btn-primary" onClick={() => handleReprocess()} disabled={isProcessing['all']}>
-                   {isProcessing['all'] ? <RefreshCw className="animate-pulse" size={16} /> : <RefreshCw size={16} />} 
-                   Reprocess Available
-                </button>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {['audio', 'transcript', 'metadata'].map(mod => {
-                   const isAvailable = hasModality(mod);
-                   const statusInfo = getModalityStatus(mod);
-                   const pState = pipelineStats?.pipelines?.[mod];
-                   const isProc = isProcessing[mod];
-                   const isUp = isProcessing[`${mod}-upload`];
-                   
-                   return (
-                     <div key={mod} className="glass-card flex flex-col gap-3" style={{ background: 'var(--bg-1)', padding: '1.5rem', border: `1px solid ${isAvailable ? 'var(--border-1)' : 'rgba(239, 68, 68, 0.25)'}` }}>
-                        <div className="flex justify-between items-center pb-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-                           <div className="flex items-center gap-2">
-                              <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{mod}</div>
-                              <span className={`badge badge-${isAvailable ? 'success' : 'danger'}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
-                                 {isAvailable ? 'Available' : 'Missing'}
-                              </span>
-                           </div>
-                           <div className="flex gap-2">
-                              <button className="btn btn-secondary btn-sm" onClick={() => handleReprocess(mod)} disabled={isProc || !isAvailable} title="Run Pipeline">
-                                {isProc ? <RefreshCw className="animate-pulse" size={14}/> : <Play size={14}/>}
-                              </button>
-                              <button className="btn btn-primary btn-sm" onClick={() => handleOpenModal(mod, isAvailable)} disabled={isUp} title={isAvailable ? "Update Data" : "Upload Data"}>
-                                 {isAvailable ? <Edit size={14}/> : <Upload size={14}/>}
-                              </button>
-                           </div>
-                        </div>
-
-                        {statusInfo && statusInfo.embedding_status && (
-                           <div className="text-small pt-1">
-                             <div className="flex justify-between">
-                                <span className="text-muted">Embedding:</span>
-                                <span className={`badge badge-${statusInfo.embedding_status === 'completed' ? 'success' : statusInfo.embedding_status === 'failed' ? 'danger' : 'info'}`} style={{ fontSize: '0.65rem' }}>
-                                   {statusInfo.embedding_status}
-                                </span>
-                             </div>
-                             {statusInfo.error_message && (
-                                <div className="text-danger mt-2 bg-red-900 bg-opacity-20 p-2 rounded text-xs break-words">
-                                   Error: {statusInfo.error_message}
-                                </div>
-                             )}
-                           </div>
-                        )}
-                        
-                        {pState ? (
-                           <div className="flex flex-col gap-3 mt-2">
-                              <div className="flex justify-between text-small" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', padding: '0.5rem', borderRadius: '4px' }}>
-                                 <span className="text-muted">Status</span>
-                                 <span className={`badge badge-${pState.overall_status === 'completed' ? 'success' : pState.overall_status === 'failed' ? 'danger' : 'info'}`}>
-                                    {pState.overall_status}
-                                 </span>
-                              </div>
-                              <div className="flex flex-col gap-2">
-                                 {pState.stages?.map((stage: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center text-small p-2 rounded" style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}>
-                                       <span style={{ color: 'var(--text-secondary)' }}>{stage.stage}</span>
-                                       <div className="flex items-center gap-2">
-                                          {stage.duration_ms && <span className="text-muted" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{Math.round(stage.duration_ms)}ms</span>}
-                                          {stage.status === 'completed' ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : stage.status === 'failed' ? <X size={14} style={{ color: 'var(--danger)' }} /> : stage.status === 'processing' ? <RefreshCw size={14} className="animate-pulse" style={{ color: 'var(--info)' }} /> : <Clock size={14} style={{ color: 'var(--warning)' }} />}
-                                       </div>
-                                    </div>
-                                 ))}
-                              </div>
-                           </div>
-                        ) : (
-                           <div className="text-small text-muted p-6 text-center mt-2" style={{ background: 'var(--bg-2)', borderRadius: '4px', border: '1px dashed var(--border-2)' }}>
-                              No pipeline history.
-                           </div>
-                        )}
-                     </div>
-                   );
-                })}
-             </div>
-          </div>
-        )}
-
-      </div>
-      
-      {isModalOpen && createPortal(
-        <div className="modal-overlay animate-fade-in">
-          <div className="glass-card" style={{ width: '100%', maxWidth: '480px', position: 'relative', margin: 'auto', background: 'var(--bg-1)', border: '1px solid var(--border-2)', boxShadow: 'var(--shadow-3)' }}>
-            <button 
-              onClick={handleCloseModal} 
-              className="btn-icon" 
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
+      {/* ── TABS ── */}
+      <div className="tab-segmented-container">
+        {[
+          { id: 'audio',      label: 'Audio',               icon: <Volume2 size={14} />,  available: hasModality('audio')      },
+          { id: 'transcript', label: 'Transcript',           icon: <FileText size={14} />, available: hasModality('transcript') },
+          { id: 'metadata',   label: 'Metadata',             icon: <Database size={14} />, available: hasModality('metadata')   },
+          { id: 'processing', label: 'Processing Pipeline',  icon: <Cpu size={14} />,      available: undefined                 },
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`tab-segmented-btn ${isActive ? 'active' : ''}`}
+              aria-selected={isActive}
+              role="tab"
             >
-              <X size={20} className="text-secondary" />
+              <span className="tab-icon">{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.available !== undefined && (
+                <span
+                  className={`tab-status-dot ${tab.available ? 'status-available' : 'status-missing'}`}
+                  title={tab.available ? 'Data available' : 'Data missing'}
+                />
+              )}
             </button>
-            <h2 className="heading-2" style={{ textTransform: 'capitalize' }}>
-               {isUpdateMode ? 'Update' : 'Upload'} {activeModality}
+          );
+        })}
+      </div>
+
+      {/* ── TAB CONTENT ── */}
+      <div key={activeTab} className="md-tab-content animate-fade-in" role="tabpanel">
+
+        {/* ════ AUDIO TAB ════ */}
+        {activeTab === 'audio' && (
+          <div>
+            <div className="md-section-header">
+              <div>
+                <h2 className="md-section-title">Audio Playback</h2>
+              </div>
+              <div className="md-section-actions">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleOpenModal('audio', hasModality('audio'))}
+                  aria-label={hasModality('audio') ? 'Replace audio file' : 'Upload audio file'}
+                >
+                  {hasModality('audio') ? <><Edit size={13} /> Replace</> : <><Upload size={13} /> Upload</>}
+                </button>
+              </div>
+            </div>
+
+            {hasModality('audio') ? (
+              <div className="md-audio-card">
+                <div className="md-audio-meta">
+                  <div className="md-audio-icon-wrap" aria-hidden="true">
+                    <Volume2 size={20} />
+                  </div>
+                  <div className="md-audio-text">
+                    <div className="md-audio-title">{media.title}</div>
+                    <div className="md-audio-artist">{media.artist || 'Unknown Artist'}</div>
+                  </div>
+                  <span className="badge badge-success" style={{ fontSize: '10px' }}>Ready</span>
+                </div>
+                <div className="md-audio-player-wrap">
+                  <audio
+                    controls
+                    src={MediaAPI.streamUrl(media.id)}
+                    className="md-audio-player"
+                    aria-label={`Play ${media.title}`}
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              </div>
+            ) : (
+              <div className="md-empty-state">
+                <Volume2 size={36} className="md-empty-icon" aria-hidden="true" />
+                <h3 className="md-empty-title">No audio file linked</h3>
+                <p className="md-empty-body">
+                  Upload an audio or video file to enable playback and pipeline processing for this media item.
+                </p>
+                <button className="btn btn-primary" onClick={() => handleOpenModal('audio', false)}>
+                  <Upload size={13} /> Upload Audio
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════ TRANSCRIPT TAB ════ */}
+        {activeTab === 'transcript' && (
+          <div>
+            <div className="md-section-header">
+              <div>
+                <h2 className="md-section-title">Transcript</h2>
+                {hasModality('transcript') && media.transcript_text && (
+                  <p className="md-section-sub">
+                    {media.transcript_text.split(/\s+/).filter((w: string) => w.length > 0).length} words
+                  </p>
+                )}
+              </div>
+              <div className="md-section-actions">
+                {hasModality('transcript') && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleCopyTranscript}
+                    aria-label="Copy transcript to clipboard"
+                  >
+                    <Copy size={13} /> Copy
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleOpenModal('transcript', hasModality('transcript'))}
+                  aria-label={hasModality('transcript') ? 'Edit transcript' : 'Upload transcript'}
+                >
+                  {hasModality('transcript') ? <><Edit size={13} /> Edit</> : <><Upload size={13} /> Upload</>}
+                </button>
+              </div>
+            </div>
+
+            {hasModality('transcript') && media.transcript_text ? (
+              <div className="md-transcript-viewer">
+                <p className="md-transcript-text">{media.transcript_text}</p>
+              </div>
+            ) : (
+              <div className="md-empty-state">
+                <FileText size={36} className="md-empty-icon" aria-hidden="true" />
+                <h3 className="md-empty-title">No transcript available</h3>
+                <p className="md-empty-body">
+                  This media item does not have transcript data. Upload a transcript or lyrics to enable semantic search and embedding.
+                </p>
+                <button className="btn btn-primary" onClick={() => handleOpenModal('transcript', false)}>
+                  <Upload size={13} /> Upload Transcript
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════ METADATA TAB ════ */}
+        {activeTab === 'metadata' && (
+          <div>
+            <div className="md-section-header">
+              <div>
+                <h2 className="md-section-title">Metadata</h2>
+              </div>
+              <div className="md-section-actions">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleOpenModal('metadata', hasModality('metadata'))}
+                  aria-label={hasModality('metadata') ? 'Edit metadata' : 'Upload metadata'}
+                >
+                  {hasModality('metadata') ? <><Edit size={13} /> Edit</> : <><Upload size={13} /> Upload</>}
+                </button>
+              </div>
+            </div>
+
+            <div className="md-meta-grid">
+              {/* Basic info card */}
+              <div className="md-meta-card">
+                <div className="md-meta-card-title">Basic Information</div>
+                {([
+                  ['Title',          media.title],
+                  ['Artist / Creator', media.artist],
+                  ['Album / Show',   media.album || media.show_name],
+                  ['Genre',          media.genre],
+                  ['Language',       media.language],
+                  ['Duration',       media.duration ? formatDuration(media.duration) : null],
+                  ['Tags',           media.tags?.length ? media.tags.join(', ') : null],
+                  ['Type',           media.media_type],
+                ] as [string, string | null | undefined][]).map(([label, value]) => (
+                  <div key={label} className="md-kv-row">
+                    <span className="md-kv-label">{label}</span>
+                    <span className="md-kv-value" title={value ?? ''}>
+                      {value ?? <span className="md-kv-empty">—</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Additional fields card */}
+              <div className="md-meta-card">
+                <div className="md-meta-card-title">Additional Fields</div>
+                {media.metadata_fields && Object.keys(media.metadata_fields).length > 0 ? (
+                  <pre className="md-code-block">
+                    {JSON.stringify(media.metadata_fields, null, 2)}
+                  </pre>
+                ) : (
+                  <div className="md-empty-inline">No additional metadata fields.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ════ PROCESSING TAB ════ */}
+        {activeTab === 'processing' && (
+          <div>
+            <div className="md-section-header">
+              <div>
+                <h2 className="md-section-title">Pipeline Processing</h2>
+              </div>
+              <div className="md-section-actions">
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleReprocess()}
+                  disabled={isProcessing['all']}
+                  aria-label="Reprocess all available modalities"
+                >
+                  <RefreshCw size={13} className={isProcessing['all'] ? 'animate-pulse' : ''} />
+                  Reprocess All
+                </button>
+              </div>
+            </div>
+
+            {/* Summary stats */}
+            <div className="md-pipeline-summary">
+              <div className="md-pipeline-stat">
+                <div className="md-pipeline-stat-label">Total Time</div>
+                <div className="md-pipeline-stat-value">{totalDurationSeconds}s</div>
+              </div>
+              <div className="md-pipeline-stat">
+                <div className="md-pipeline-stat-label">Stages</div>
+                <div className="md-pipeline-stat-value">{totalStages}</div>
+              </div>
+              <div className="md-pipeline-stat">
+                <div className="md-pipeline-stat-label">Completed</div>
+                <div className={`md-pipeline-stat-value ${completedStages > 0 ? 'clr-success' : ''}`}>
+                  {completedStages}
+                </div>
+              </div>
+              <div className="md-pipeline-stat">
+                <div className="md-pipeline-stat-label">Failed</div>
+                <div className={`md-pipeline-stat-value ${failedStages > 0 ? 'clr-danger' : ''}`}>
+                  {failedStages}
+                </div>
+              </div>
+            </div>
+
+            {/* Per-modality pipeline cards */}
+            <div className="md-pipeline-modalities">
+              {['audio', 'transcript', 'metadata'].map(mod => {
+                const isAvailable = hasModality(mod);
+                const statusInfo  = getModalityStatus(mod);
+                const pState      = pipelineStats?.pipelines?.[mod];
+                const isProc      = isProcessing[mod];
+                const isUp        = isProcessing[`${mod}-upload`];
+                const overallStatus = pState?.overall_status;
+
+                return (
+                  <div
+                    key={mod}
+                    className="md-pipeline-modality"
+                    style={{ borderColor: !isAvailable ? 'rgba(239,68,68,0.2)' : undefined }}
+                  >
+                    {/* Modality header */}
+                    <div className="md-pipeline-modality-header">
+                      <div className="flex items-center gap-2" style={{ flexWrap: 'wrap', gap: '6px' }}>
+                        <span className="md-pipeline-modality-name">{mod}</span>
+                        <span className={`badge badge-${isAvailable ? 'success' : 'danger'}`}>
+                          {isAvailable ? 'Available' : 'Missing'}
+                        </span>
+                        {statusInfo?.embedding_status && (
+                          <span className={`badge badge-${
+                            statusInfo.embedding_status === 'completed' ? 'success'
+                            : statusInfo.embedding_status === 'failed'    ? 'danger'
+                            : 'warning'
+                          }`}>
+                            Embedding: {statusInfo.embedding_status}
+                          </span>
+                        )}
+                        {overallStatus && (
+                          <span className={`badge badge-${
+                            overallStatus === 'completed' ? 'success'
+                            : overallStatus === 'failed'  ? 'danger'
+                            : 'info'
+                          }`}>
+                            {overallStatus}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleReprocess(mod)}
+                          disabled={isProc || !isAvailable}
+                          aria-label={`Run ${mod} pipeline`}
+                          title="Run Pipeline"
+                        >
+                          {isProc ? <RefreshCw size={13} className="animate-pulse" /> : <Play size={13} />}
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleOpenModal(mod, isAvailable)}
+                          disabled={isUp}
+                          aria-label={isAvailable ? `Update ${mod} data` : `Upload ${mod} data`}
+                          title={isAvailable ? 'Update Data' : 'Upload Data'}
+                        >
+                          {isAvailable ? <Edit size={13} /> : <Upload size={13} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Timeline or empty state */}
+                    {pState ? (
+                      <div className="md-pipeline-timeline">
+                        {pState.stages?.map((stage: any, idx: number) => {
+                          const isLast = idx === pState.stages.length - 1;
+                          return (
+                            <div
+                              key={idx}
+                              className={`md-pipeline-stage md-stage-${stage.status}`}
+                            >
+                              <div className="md-stage-connector">
+                                <div className="md-stage-dot" aria-hidden="true" />
+                                {!isLast && <div className="md-stage-line" aria-hidden="true" />}
+                              </div>
+                              <div className="md-stage-body">
+                                <span className="md-stage-name">{stage.stage?.replace(/_/g, ' ')}</span>
+                                <div className="md-stage-right">
+                                  {stage.duration_ms != null && (
+                                    <span className="md-stage-duration">{formatMs(stage.duration_ms)}</span>
+                                  )}
+                                  <span className="md-stage-icon" aria-label={stage.status}>
+                                    {stage.status === 'completed'  && <CheckCircle size={13} />}
+                                    {stage.status === 'failed'     && <X           size={13} />}
+                                    {stage.status === 'processing' && <RefreshCw   size={13} className="animate-pulse" />}
+                                    {stage.status === 'pending'    && <Clock       size={13} />}
+                                    {stage.status === 'skipped'    && <Clock       size={13} />}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="md-empty-inline" style={{ margin: '12px 16px' }}>
+                        No pipeline history for this modality.
+                      </div>
+                    )}
+
+                    {/* Error banner */}
+                    {statusInfo?.error_message && (
+                      <div className="md-error-banner" role="alert">
+                        {statusInfo.error_message}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ── UPLOAD / EDIT MODAL ── */}
+      {isModalOpen && createPortal(
+        <div className="modal-overlay animate-fade-in" role="dialog" aria-modal="true" aria-label={`${isUpdateMode ? 'Update' : 'Upload'} ${activeModality}`}>
+          <div className="modal" style={{ padding: '24px' }}>
+            <button
+              onClick={handleCloseModal}
+              className="btn-icon"
+              aria-label="Close modal"
+              style={{ position: 'absolute', top: '16px', right: '16px' }}
+            >
+              <X size={16} />
+            </button>
+
+            <h2 className="md-section-title" style={{ textTransform: 'capitalize', marginBottom: '4px' }}>
+              {isUpdateMode ? 'Update' : 'Upload'} {activeModality}
             </h2>
-            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>
-               Provide the {isUpdateMode ? 'new' : 'missing'} data to process.
+            <p className="md-section-sub" style={{ marginBottom: '20px' }}>
+              Provide the {isUpdateMode ? 'updated' : 'missing'} data to process.
             </p>
 
             <form onSubmit={submitModalData} className="flex flex-col gap-3">
               {activeModality === 'audio' && (
                 <div className="input-group">
-                  <label className="input-label">Audio/Video File</label>
-                  <div className="flex items-center gap-3" style={{ background: 'var(--bg-2)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-2)' }}>
-                    <input required type="file" accept="audio/*,video/*" className="text-small" style={{ width: '100%', color: 'var(--text-primary)' }} onChange={e => setSelectedFile(e.target.files?.[0] || null)} />
+                  <label className="input-label" htmlFor="audio-upload">Audio / Video File</label>
+                  <div style={{ background: 'var(--bg-2)', padding: '12px', borderRadius: 'var(--r-2)', border: '1px dashed var(--border-2)' }}>
+                    <input
+                      id="audio-upload"
+                      required
+                      type="file"
+                      accept="audio/*,video/*"
+                      className="text-small"
+                      style={{ width: '100%', color: 'var(--text-1)' }}
+                      onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                    />
                   </div>
                 </div>
               )}
-              
+
               {activeModality === 'transcript' && (
                 <div className="input-group">
-                  <label className="input-label">Transcript Text / Lyrics</label>
-                  <textarea required className="input-field" placeholder="Paste transcript here..." style={{ minHeight: '150px' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
+                  <label className="input-label" htmlFor="transcript-input">Transcript Text / Lyrics</label>
+                  <textarea
+                    id="transcript-input"
+                    required
+                    className="input-field"
+                    placeholder="Paste transcript here…"
+                    style={{ minHeight: '160px' }}
+                    value={textInput}
+                    onChange={e => setTextInput(e.target.value)}
+                  />
                 </div>
               )}
 
               {activeModality === 'metadata' && (
                 <div className="input-group">
-                  <label className="input-label">Metadata (JSON format)</label>
-                  <textarea required className="input-field" placeholder='{"artist": "Queen", "year": 1975}' style={{ minHeight: '150px', fontFamily: 'monospace', fontSize: '0.85rem' }} value={textInput} onChange={e => setTextInput(e.target.value)} />
+                  <label className="input-label" htmlFor="metadata-input">Metadata (JSON)</label>
+                  <textarea
+                    id="metadata-input"
+                    required
+                    className="input-field"
+                    placeholder='{"artist": "Queen", "year": 1975}'
+                    style={{ minHeight: '160px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+                    value={textInput}
+                    onChange={e => setTextInput(e.target.value)}
+                  />
                 </div>
               )}
-              
-              <div className="flex justify-end gap-3" style={{ marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" style={{ background: 'transparent' }} onClick={handleCloseModal} disabled={isUploading}>Cancel</button>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseModal}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn btn-primary" disabled={isUploading}>
-                  {isUploading ? 'Uploading...' : 'Save Data'}
+                  {isUploading ? (
+                    <><RefreshCw size={13} className="animate-pulse" /> Uploading…</>
+                  ) : (
+                    'Save'
+                  )}
                 </button>
               </div>
             </form>
