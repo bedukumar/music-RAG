@@ -104,17 +104,17 @@ const Chat: React.FC = () => {
             <p className="empty-subtitle">Search. Analyze. Discover.</p>
             <button className="cta-button" onClick={handleNewChat}>Start a Conversation <svg className="cta-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></button>
             <div className="capability-chips">
-              <div className="chip">
-                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14 10l-4 4m0-4l4 4"/></svg>
-                Semantic Search
+              <div className="chip" onClick={handleNewChat} role="button" tabIndex={0} title="Start conversation with Semantic Search">
+                <svg className="chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14 10l-4 4m0-4l4 4"/></svg>
+                <span>Semantic Search</span>
               </div>
-              <div className="chip">
-                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><polygon points="9 18 5 22 5 9 9 5"/></svg>
-                Audio Retrieval
+              <div className="chip" onClick={handleNewChat} role="button" tabIndex={0} title="Start conversation with Audio Retrieval">
+                <svg className="chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><polygon points="9 18 5 22 5 9 9 5"/></svg>
+                <span>Audio Retrieval</span>
               </div>
-              <div className="chip">
-                <svg className="chip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>
-                Natural Language Queries
+              <div className="chip" onClick={handleNewChat} role="button" tabIndex={0} title="Start conversation with Natural Language Queries">
+                <svg className="chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>
+                <span>Natural Language Queries</span>
               </div>
             </div>
           </div>

@@ -562,29 +562,41 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 14px;
-  color: #fff;
-  backdrop-filter: blur(4px);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
   opacity: 0;
   transform: translateY(20px) scale(0.95);
   animation: chipFade 300ms forwards;
+  transition: transform var(--t-fast), background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
 }
 
 .chip:hover {
-  background: rgba(255,255,255,0.09);
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 0 8px rgba(255,255,255,0.3);
+  background: rgba(91, 91, 214, 0.15);
+  border-color: rgba(91, 91, 214, 0.45);
+  color: #ffffff;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 14px rgba(91, 91, 214, 0.25);
 }
 
 .chip-icon {
-  width: 14px;
-  height: 14px;
-  opacity: 0.8;
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+  flex-shrink: 0;
+  transition: transform var(--t-fast), color var(--t-fast);
+}
+
+.chip:hover .chip-icon {
+  color: #ffffff;
+  transform: scale(1.1);
 }
 
 .chip:nth-child(1) { animation-delay: 0ms; }
@@ -1359,29 +1371,50 @@
 
 /* ── CTA button ── */
 [data-theme="light"] .cta-button {
-  background: rgba(75, 74, 207, 0.1);
-  color: var(--accent);
-  box-shadow: 0 4px 14px rgba(75, 74, 207, 0.15);
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(75, 74, 207, 0.35);
 }
 
 [data-theme="light"] .cta-button:hover {
-  background: rgba(75, 74, 207, 0.16);
+  background: var(--accent-hover);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(75, 74, 207, 0.45);
   transform: translateY(-2px) scale(1.02);
+}
+
+[data-theme="light"] .cta-button .cta-arrow {
+  opacity: 0.9;
+}
+
+[data-theme="light"] .cta-button:hover .cta-arrow {
+  opacity: 1;
 }
 
 /* ── Capability chips ── */
 [data-theme="light"] .chip {
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  color: var(--text-2);
-  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(75, 74, 207, 0.2);
+  color: var(--text-1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .chip .chip-icon {
+  color: var(--accent);
 }
 
 [data-theme="light"] .chip:hover {
-  background: rgba(75, 74, 207, 0.07);
+  background: rgba(75, 74, 207, 0.08);
+  border-color: var(--accent);
   color: var(--accent);
-  box-shadow: 0 0 8px rgba(75, 74, 207, 0.15);
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 14px rgba(75, 74, 207, 0.2);
+  transform: translateY(-2px) scale(1.02);
+}
+
+[data-theme="light"] .chip:hover .chip-icon {
+  color: var(--accent);
+  transform: scale(1.1);
 }
 
 /* ── Feature cards ── */
